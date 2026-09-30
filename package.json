@@ -22,6 +22,7 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:scripts": "node --test scripts/*.test.mjs",
+    "i18n:check": "node scripts/i18n-extract.mjs",
     "lint": "biome check --write",
     "sync-version": "node scripts/sync-version.js",
     "stamp-assets": "node scripts/stamp-assets.js",

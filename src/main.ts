@@ -17,5 +17,9 @@ import "@/services";
 import "@/generators/styles-legacy";
 
 import { boot } from "@/components/lifecycle";
+import { initializeLocalization } from "@/services/localization";
 
-document.addEventListener("DOMContentLoaded", boot);
+document.addEventListener("DOMContentLoaded", () => {
+  initializeLocalization();
+  void boot();
+});
