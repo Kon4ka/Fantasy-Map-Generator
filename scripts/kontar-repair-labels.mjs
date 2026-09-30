@@ -1,0 +1,124 @@
+import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { chromium } from "playwright";
+
+const root = path.resolve(import.meta.dirname, "..");
+const appUrl = process.env.KONTAR_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
+const browserPath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const inputPath = path.resolve(process.argv[2] ?? "");
+const outputPath = path.resolve(process.argv[3] ?? "");
+
+if (!process.argv[2] || !fs.existsSync(inputPath)) throw new Error(`Не найдена исходная карта: ${inputPath}`);
+if (!process.argv[3]) throw new Error("Не указан путь для исправленной карты");
+
+const serverIsReady = async () => {
+  try {
+    return (await fetch(appUrl, { signal: AbortSignal.timeout(1000) })).ok;
+  } catch {
+    return false;
+  }
+};
+
+const waitForServer = async () => {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    if (await serverIsReady()) return;
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw new Error("Локальный сервер не запустился за 60 секунд");
+};
+
+const stopProcessTree = child => {
+  if (child?.pid) spawnSync("taskkill.exe", ["/pid", String(child.pid), "/t", "/f"], { windowsHide: true });
+};
+
+let server;
+let browser;
+
+try {
+  const ownsServer = !(await serverIsReady());
+  if (ownsServer) {
+    server = spawn("cmd.exe", ["/d", "/s", "/c", "npm.cmd", "run", "dev", "--", "--host", "127.0.0.1"], {
+      cwd: root,
+      windowsHide: true,
+      stdio: "ignore"
+    });
+  }
+
+  await waitForServer();
+  browser = await chromium.launch({ headless: true, executablePath: browserPath });
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  await page.addInitScript(() => localStorage.setItem("version", "99.99.99"));
+  await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.waitForSelector("#mapToLoad", { state: "attached", timeout: 120_000 });
+
+  const loadMap = async mapPath => {
+    const mapsBeforeLoad = await page.evaluate(() => mapHistory.length);
+    await page.locator("#mapToLoad").setInputFiles(mapPath);
+    await page.waitForFunction(previousCount => mapHistory.length > previousCount, mapsBeforeLoad, { timeout: 120_000 });
+  };
+
+  await loadMap(inputPath);
+  const result = await page.evaluate(() => {
+    const normalize = (text = "") => text.replace(/\|/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase();
+    const states = pack.states.filter(state => state.i && !state.removed);
+    const stateNames = new Set(states.flatMap(state => [state.name, state.fullName].filter(Boolean).map(normalize)));
+    const removed = pack.addedLabels.filter(({ label }) => stateNames.has(normalize(label.text))).map(label => label.label.text);
+
+    pack.addedLabels = pack.addedLabels
+      .filter(({ label }) => !stateNames.has(normalize(label.text)))
+      .map(addedLabel => {
+        const text = addedLabel.label.text?.trim() || "";
+        if (text.startsWith("()")) return addedLabel;
+        return { ...addedLabel, label: { ...addedLabel.label, text: `() ${text}`.trimEnd() } };
+      });
+
+    States.collectStatistics();
+    States.getPoles();
+    states.forEach(state => delete state.label);
+    options.map.labels.groups.filter(group => group.type === "state").forEach(group => delete group.active);
+    Layers.draw("labels");
+
+    return {
+      states: states.length,
+      migratedStateLabels: removed,
+      geographicLabels: pack.addedLabels.map(({ label }) => label.text)
+    };
+  });
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+  await page.evaluate(() => window.Services.Save.toMachine());
+  await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+  await (await downloadPromise).saveAs(outputPath);
+
+  await loadMap(outputPath);
+  const verification = await page.evaluate(() => {
+    const normalize = (text = "") => text.replace(/\|/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase();
+    const states = pack.states.filter(state => state.i && !state.removed);
+    const stateNames = new Set(states.flatMap(state => [state.name, state.fullName].filter(Boolean).map(normalize)));
+    return {
+      states: states.length,
+      activeStateLabels: options.map.labels.groups.filter(group => group.type === "state").every(group => group.active !== false),
+      duplicateStateLabels: pack.addedLabels.filter(({ label }) => stateNames.has(normalize(label.text))).map(label => label.label.text),
+      unmarkedGeographicLabels: pack.addedLabels
+        .filter(({ label }) => !label.text?.trim().startsWith("()"))
+        .map(label => label.label.text)
+    };
+  });
+
+  if (
+    verification.states !== result.states ||
+    !verification.activeStateLabels ||
+    verification.duplicateStateLabels.length ||
+    verification.unmarkedGeographicLabels.length
+  ) {
+    throw new Error(`Проверка исправленной карты не пройдена: ${JSON.stringify(verification)}`);
+  }
+
+  console.log(JSON.stringify({ inputPath, outputPath, result, verification }, null, 2));
+} finally {
+  if (browser?.isConnected()) await browser.close();
+  stopProcessTree(server);
+}
