@@ -1249,12 +1249,26 @@ function randomizeStatesExpansion(): void {
 }
 
 export function refitAllStateLabels(): void {
+  States.collectStatistics();
+  States.getPoles();
+
+  const stateNames = new Set<string>();
   for (const state of pack.states) {
     if (!state.i || state.removed) continue;
+    stateNames.add(normalizeLabelText(state.name));
+    if (state.fullName) stateNames.add(normalizeLabelText(state.fullName));
     delete state.label;
   }
+
+  pack.addedLabels = (pack.addedLabels || []).filter(({ label }) => !stateNames.has(normalizeLabelText(label.text)));
+  for (const group of options.map.labels.groups) if (group.type === "state") delete group.active;
+
   Layers.draw("labels");
-  tip("All state labels were recalculated", false, "success", 4000);
+  tip("State labels were recalculated; old duplicate labels were removed", false, "success", 4000);
+}
+
+function normalizeLabelText(text = ""): string {
+  return text.replace(/\|/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase();
 }
 
 function exitRegenerationMenu(): void {

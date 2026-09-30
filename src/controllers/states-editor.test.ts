@@ -41,6 +41,7 @@ beforeEach(() => {
       burg: new Uint16Array(4)
     },
     burgs: [{}],
+    addedLabels: [],
     provinces: [0],
     states: [
       { i: 0, name: "Neutrals", provinces: [] },
@@ -48,6 +49,13 @@ beforeEach(() => {
       { i: 2, name: "New owner", center: 3, capital: 0, provinces: [], neighbors: [1] }
     ]
   } as unknown as typeof globalThis.pack;
+  globalThis.options = {
+    map: { labels: { groups: [{ name: "state", type: "state", active: false, zoom: { min: 0, max: 20 } }] } }
+  } as typeof globalThis.options;
+  globalThis.States = {
+    collectStatistics: vi.fn(),
+    getPoles: vi.fn()
+  } as unknown as typeof globalThis.States;
 });
 
 describe("reconcilePaintedStates", () => {
@@ -71,14 +79,24 @@ describe("reconcilePaintedStates", () => {
 });
 
 describe("refitAllStateLabels", () => {
-  it("clears all active state overrides and redraws labels", () => {
+  it("migrates legacy state-name labels and redraws active state labels", () => {
     pack.states[1].label = { text: "Old center", pathPoints: [[1, 1]] };
     pack.states[2].label = { text: "New owner", dx: 40, dy: 20 };
+    pack.states[2].fullName = "The New Owner";
+    pack.addedLabels = [
+      { i: 1, x: 10, y: 20, label: { text: " Old|center ", group: "added" } },
+      { i: 2, x: 20, y: 30, label: { text: "The New Owner", group: "added" } },
+      { i: 3, x: 30, y: 40, label: { text: "Sea of Mist", group: "added" } }
+    ];
 
     refitAllStateLabels();
 
     expect(pack.states[1].label).toBeUndefined();
     expect(pack.states[2].label).toBeUndefined();
+    expect(pack.addedLabels.map(label => label.label.text)).toEqual(["Sea of Mist"]);
+    expect(options.map.labels.groups[0].active).toBeUndefined();
+    expect(States.collectStatistics).toHaveBeenCalledOnce();
+    expect(States.getPoles).toHaveBeenCalledOnce();
     expect(Layers.draw).toHaveBeenCalledWith("labels");
   });
 });

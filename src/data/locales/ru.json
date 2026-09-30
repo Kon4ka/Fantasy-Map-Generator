@@ -302,7 +302,7 @@
     "All routes are locked. Unlock routes to remove them, or use Lock all to unlock first.": "Все маршруты заблокированы. Разблокируйте маршруты, чтобы удалить их, или используйте «Заблокировать все», чтобы сначала разблокировать их.",
     "All routes are now locked; nothing was removed.": "Все маршруты теперь заблокированы; ничего не удалялось.",
     "All states": "Все штаты",
-    "All state labels were recalculated": "Все подписи государств пересчитаны",
+    "State labels were recalculated; old duplicate labels were removed": "Подписи государств пересчитаны; старые дубликаты удалены",
     "all supporters": "все сторонники",
     "All types": "Все типы",
     "All units should have unique names": "Все юниты должны иметь уникальные имена",

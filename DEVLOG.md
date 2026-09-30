@@ -24,7 +24,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - All translations live in `src/data/locales/ru.json`; runtime logic is in `src/services/localization.ts`.
 - Catalog maintenance: `scripts/i18n-extract.mjs`, `scripts/i18n-generate-ru.mjs`.
 - Translation architecture: `docs/architecture/localization.md`.
-- Coverage: 4418 exact messages, 3 patterns, 40 intentionally ignored names; static missing count is 0.
+- Coverage: 4422 exact messages, 3 patterns, 40 intentionally ignored names; static missing count is 0.
 - Map labels, user notes, editable content, and speech voices are intentionally not translated.
 - First editable Kontar draft: `worlds/kontar/kontar-first-rift-draft.map`.
 - Vector reference: `worlds/kontar/reference/kontar-first-rift.svg`.
@@ -37,6 +37,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - The launcher selects the newest `.map` from the user Downloads folder or `worlds/kontar` instead of a hard-coded draft.
 - State painting can capture hidden state-center cells; centers relocate to remaining territory, and states with no territory are removed with a warning.
 - `Win+Shift+S` is reserved for Windows screenshots; the states editor has an explicit action to refit all state labels immediately.
+- State-label refitting migrates legacy manual labels that duplicate state names, enables the real state-label group, and preserves geographic labels.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -54,6 +55,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Latest-save cleanup round-trip — 17 states preserved; 306 burgs, 232 routes, and 12 markets reduced to 0; launcher dry-run selects the cleaned map
 - State-center paint regression — captured centers relocate, and states reduced to zero cells are safely removed
 - Shortcut / label regression — `Win+Shift+S` triggers no app command; one action refits every active state label
+- Legacy-label migration regression — duplicate manual state names are removed while non-state geographic labels are preserved
 
 ## Working rules
 
@@ -111,3 +113,4 @@ npm test -- --run
 - 2026-09-30 — changed the launcher to open the latest saved map and added a verified cleanup script for settlements and routes.
 - 2026-10-01 — removed the hidden state-center painting lock and added safe center relocation / empty-state cleanup.
 - 2026-10-01 — fixed the Windows screenshot shortcut conflict and added one-click refitting for all state labels.
+- 2026-10-01 — made state-label refitting migrate legacy manual state-name labels and enable the real state-label group.
