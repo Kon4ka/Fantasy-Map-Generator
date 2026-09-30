@@ -29,6 +29,8 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - First editable Kontar draft: `worlds/kontar/kontar-first-rift-draft.map`.
 - Vector reference: `worlds/kontar/reference/kontar-first-rift.svg`.
 - Reproducible generator: `scripts/kontar-generate-map.mjs`.
+- One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, and stops its server when the browser closes.
+- Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -40,6 +42,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
 - Round-trip counts — 2464 cells, 17 states, 14 cultures, 306 burgs, 77 rivers, 16 custom labels
+- Launcher self-test — detected `DISPLAY2`, started Vite, loaded `kontar-first-rift-draft.map` in Chromium, and shut down cleanly
 
 ## Working rules
 
@@ -90,3 +93,4 @@ npm test -- --run
 - 2026-09-30 — generated the first editable Kontar `.map` from the world notes and verified a clean save/load round-trip.
 - 2026-09-30 — rejected per-primitive scaling because it fragmented Valeyn and Kaishi into extra islands.
 - 2026-09-30 — scaled Valeyn and Kaishi as whole groups to 50%, kept equatorial islands centered, and removed generated sea ice.
+- 2026-09-30 — added and verified a one-click second-monitor launcher for the current Kontar map.
