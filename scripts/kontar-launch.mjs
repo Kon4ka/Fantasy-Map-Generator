@@ -67,6 +67,35 @@ const getBrowserPath = () => {
   return browserPath;
 };
 
+const getDownloadsDirectory = () => {
+  if (testRun) return path.join(logDir, "test-downloads");
+  if (process.platform !== "win32") return path.join(process.env.HOME ?? root, "Downloads");
+
+  const command = "(New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path";
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-Command", command], {
+    encoding: "utf8",
+    windowsHide: true
+  });
+  const downloadsDirectory = result.stdout?.trim();
+  if (result.status === 0 && downloadsDirectory) return downloadsDirectory;
+  return path.join(process.env.USERPROFILE ?? root, "Downloads");
+};
+
+const getAvailableDownloadPath = (downloadsDirectory, suggestedFilename) => {
+  const safeFilename = (suggestedFilename || "kontar-map.map")
+    .replace(/[<>:"/\\|?*]/g, "_")
+    .replace(/[. ]+$/g, "");
+  const filename = path.extname(safeFilename) ? safeFilename : `${safeFilename}.map`;
+  const parsed = path.parse(filename);
+  let candidate = path.join(downloadsDirectory, filename);
+  let suffix = 2;
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(downloadsDirectory, `${parsed.name}-${suffix}${parsed.ext}`);
+    suffix += 1;
+  }
+  return candidate;
+};
+
 const serverIsReady = async () => {
   try {
     const response = await fetch(appUrl, { signal: AbortSignal.timeout(1000) });
@@ -135,6 +164,25 @@ try {
     const context = await browser.newContext({ viewport: null });
     await context.addInitScript(() => localStorage.setItem("version", "99.99.99"));
     const page = await context.newPage();
+    const downloadsDirectory = getDownloadsDirectory();
+    fs.mkdirSync(downloadsDirectory, { recursive: true });
+    const pendingDownloads = new Set();
+    const saveDownload = async download => {
+      const downloadPath = getAvailableDownloadPath(downloadsDirectory, download.suggestedFilename());
+      await download.saveAs(downloadPath);
+      log(`Скачанный файл сохранён: ${downloadPath}`);
+      return downloadPath;
+    };
+
+    if (!testRun) {
+      page.on("download", download => {
+        const task = saveDownload(download)
+          .catch(error => fail(error))
+          .finally(() => pendingDownloads.delete(task));
+        pendingDownloads.add(task);
+      });
+    }
+
     await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
     await page.waitForSelector("#mapToLoad", { state: "attached", timeout: 120_000 });
     const mapsBeforeLoad = await page.evaluate(() => mapHistory.length);
@@ -148,13 +196,19 @@ try {
     log("Карта Контара открыта");
 
     if (testRun) {
+      const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+      await page.evaluate(() => window.Services.Save.toMachine());
+      const testDownloadPath = await saveDownload(await downloadPromise);
+      if (!fs.existsSync(testDownloadPath)) throw new Error("Самопроверка не обнаружила сохранённый файл карты");
+      fs.unlinkSync(testDownloadPath);
       await browser.close();
       if (ownsServer) stopProcessTree(server);
-      log("Самопроверка запуска завершена успешно");
+      log("Самопроверка запуска и сохранения завершена успешно");
       process.exit(0);
     }
 
     await new Promise(resolve => browser.once("disconnected", resolve));
+    await Promise.allSettled([...pendingDownloads]);
     if (ownsServer) stopProcessTree(server);
   }
 } catch (error) {
