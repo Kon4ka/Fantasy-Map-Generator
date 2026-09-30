@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ open: vi.fn() }));
+const mocks = vi.hoisted(() => ({ open: vi.fn(), openStates: vi.fn(), save: vi.fn() }));
 vi.mock("@/components/options/options-panel", () => ({ hideOptions: vi.fn() }));
-vi.mock("@/controllers", () => ({ Controllers: { Omnibar: { open: mocks.open } } }));
-vi.mock("@/services", () => ({ Services: {} }));
+vi.mock("@/controllers", () => ({
+  Controllers: { Omnibar: { open: mocks.open }, StatesEditor: { open: mocks.openStates } }
+}));
+vi.mock("@/services", () => ({ Services: { Save: { toMachine: mocks.save } } }));
 vi.mock("@/services/autosave", () => ({ toggleSaveReminder: vi.fn() }));
 vi.mock("./app-info", () => ({ showInfo: vi.fn() }));
 vi.mock("./dialog/dialog-helpers", () => ({ closeDialogs: vi.fn() }));
@@ -30,6 +32,21 @@ function press(
 beforeEach(() => {
   document.body.innerHTML = '<button id="regenerateRivers">Regenerate</button><input id="field" />';
   mocks.open.mockClear();
+  mocks.openStates.mockClear();
+  mocks.save.mockClear();
+});
+
+describe("modified S shortcuts", () => {
+  it("keeps Ctrl+S as the map save shortcut", () => {
+    press(document.body, "KeyS", "s", { ctrlKey: true });
+    expect(mocks.save).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Win+Shift+S to the operating system", () => {
+    press(document.body, "KeyS", "s", { metaKey: true, shiftKey: true });
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.openStates).not.toHaveBeenCalled();
+  });
 });
 
 describe("Space opens the search", () => {

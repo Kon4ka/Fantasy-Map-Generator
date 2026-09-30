@@ -211,6 +211,11 @@ function renderDialog(): void {
           <input id="adjustLabels" class="checkbox" type="checkbox" />
           <label for="adjustLabels" class="checkbox-label"><i>auto-change labels</i></label>
         </div>
+        <button
+          id="statesRefitLabels"
+          data-tip="Recalculate all state labels"
+          class="icon-arrows-cw"
+        ></button>
       </div>
 
       <button id="statesManually" data-tip="Manually re-assign states" class="icon-brush"></button>
@@ -240,6 +245,7 @@ function renderDialog(): void {
   ensureEl("statesRegenerateBack").addEventListener("click", exitRegenerationMenu);
   ensureEl("statesRecalculate").addEventListener("click", () => recalculateStates(true));
   ensureEl("statesRandomize").addEventListener("click", randomizeStatesExpansion);
+  ensureEl("statesRefitLabels").addEventListener("click", refitAllStateLabels);
   ensureEl("statesManually").addEventListener("click", openPaintEditor);
   ensureEl("statesAdd").addEventListener("click", enterAddStateMode);
   ensureEl("statesMerge").addEventListener("click", openStateMergeDialog);
@@ -1240,6 +1246,15 @@ function randomizeStatesExpansion(): void {
     ).value = String(expansionism);
   });
   recalculateStates(true);
+}
+
+export function refitAllStateLabels(): void {
+  for (const state of pack.states) {
+    if (!state.i || state.removed) continue;
+    delete state.label;
+  }
+  Layers.draw("labels");
+  tip("All state labels were recalculated", false, "success", 4000);
 }
 
 function exitRegenerationMenu(): void {

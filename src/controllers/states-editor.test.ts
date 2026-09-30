@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Layers } from "@/components/layers";
 
 vi.mock("@/components/layers", () => ({
   Layers: { draw: vi.fn(), show: vi.fn(), hide: vi.fn(), isOn: () => false }
@@ -27,7 +28,7 @@ vi.mock("@/renderers/emblems/renderer", () => ({ EmblemRenderer: { trigger: vi.f
 vi.mock("@/renderers/overlays/fogging", () => ({ fog: vi.fn(), unfog: vi.fn() }));
 vi.mock("@/renderers/overlays/highlight", () => ({ highlightElement: vi.fn(), highlightOutline: vi.fn() }));
 
-import { reconcilePaintedStates } from "./states-editor";
+import { reconcilePaintedStates, refitAllStateLabels } from "./states-editor";
 
 beforeEach(() => {
   document.body.innerHTML = '<svg><g id="debug"></g></svg><div id="tooltip"></div>';
@@ -66,5 +67,18 @@ describe("reconcilePaintedStates", () => {
     expect(removed).toEqual(["Old center"]);
     expect(pack.states[1]).toEqual({ i: 1, removed: true });
     expect(pack.states[2].neighbors).toEqual([]);
+  });
+});
+
+describe("refitAllStateLabels", () => {
+  it("clears all active state overrides and redraws labels", () => {
+    pack.states[1].label = { text: "Old center", pathPoints: [[1, 1]] };
+    pack.states[2].label = { text: "New owner", dx: 40, dy: 20 };
+
+    refitAllStateLabels();
+
+    expect(pack.states[1].label).toBeUndefined();
+    expect(pack.states[2].label).toBeUndefined();
+    expect(Layers.draw).toHaveBeenCalledWith("labels");
   });
 });

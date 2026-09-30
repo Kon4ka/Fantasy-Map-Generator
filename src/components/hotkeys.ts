@@ -28,7 +28,8 @@ function handleKeyup(event: KeyboardEvent): void {
 
   const { code, key, ctrlKey, metaKey, shiftKey, altKey } = event;
   const ctrl = ctrlKey || metaKey || key === "Control";
-  const shift = (shiftKey || key === "Shift") && !altKey;
+  const shift = (shiftKey || key === "Shift") && !altKey && !ctrl;
+  const ctrlOnly = ctrl && !shiftKey && !altKey;
   const altShift = altKey && (shiftKey || key === "Shift") && !ctrl;
   const layer = getLayerByShortcut(code);
   const brush = getVisibleBrush();
@@ -44,11 +45,11 @@ function handleKeyup(event: KeyboardEvent): void {
     hideOptions();
   } else if (code === "Delete") removeElementOnKey();
   else if (code === "KeyO" && findEl("canvas3d")) Controllers.View3d.toggleOptions();
-  else if (ctrl && code === "KeyQ") toggleSaveReminder();
-  else if (ctrl && code === "KeyS") Services.Save.toMachine();
-  else if (ctrl && code === "KeyC") Services.Save.toDropbox();
-  else if (ctrl && code === "KeyZ") findEl("undo")?.click();
-  else if (ctrl && code === "KeyY") findEl("redo")?.click();
+  else if (ctrlOnly && code === "KeyQ") toggleSaveReminder();
+  else if (ctrlOnly && code === "KeyS") Services.Save.toMachine();
+  else if (ctrlOnly && code === "KeyC") Services.Save.toDropbox();
+  else if (ctrlOnly && code === "KeyZ") findEl("undo")?.click();
+  else if (ctrlOnly && code === "KeyY") findEl("redo")?.click();
   else if ((shift || altShift) && code === "KeyH") Controllers.HeightmapEditor.open();
   else if ((shift || altShift) && code === "KeyB") Controllers.BiomesEditor.open();
   else if ((shift || altShift) && code === "KeyS") Controllers.StatesEditor.open();
