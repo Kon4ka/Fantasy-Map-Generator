@@ -2,7 +2,7 @@
 
 Read this file before starting work. Update it after every material change. Keep entries concise and factual.
 
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 ## Goal
 
@@ -35,6 +35,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Generated map content localization is centralized in `src/services/russian-map-content.ts`: proper names and name-base corpora are transliterated to Cyrillic on map load/generation.
 - Domain terminology is centralized in `ru.json` under `dataMessages` and `dataPatterns`; internal English IDs remain unchanged for compatibility.
 - The launcher selects the newest `.map` from the user Downloads folder or `worlds/kontar` instead of a hard-coded draft.
+- State painting can capture hidden state-center cells; centers relocate to remaining territory, and states with no territory are removed with a warning.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -42,7 +43,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Node.js `24.11.1`
 - `npm run i18n:check` — passed, 0 missing strings
 - `npm run build` — passed
-- `npm test -- --run` — 106 files, 1198 tests passed
+- `npm test -- --run` — 107 files, 1200 tests passed
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
 - Round-trip counts — 2464 cells, 17 states, 14 cultures, 306 burgs, 77 rivers, 16 custom labels
@@ -50,6 +51,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Heightmap localization regression — 4 focused tests passed; Russian catalog check and production build passed
 - Russian data-editor browser audit — biomes, zones, features, markers, trade animation, name bases, provinces, religions, and states contain no remaining Latin-script values
 - Latest-save cleanup round-trip — 17 states preserved; 306 burgs, 232 routes, and 12 markets reduced to 0; launcher dry-run selects the cleaned map
+- State-center paint regression — captured centers relocate, and states reduced to zero cells are safely removed
 
 ## Working rules
 
@@ -105,3 +107,4 @@ npm test -- --run
 - 2026-09-30 — fixed Russian localization preventing `Risk`, `Keep`, and `Erase` heightmap edits from being applied on exit.
 - 2026-09-30 — completed Russian data terminology and added Cyrillic transliteration for generated names and all name-base corpora.
 - 2026-09-30 — changed the launcher to open the latest saved map and added a verified cleanup script for settlements and routes.
+- 2026-10-01 — removed the hidden state-center painting lock and added safe center relocation / empty-state cleanup.

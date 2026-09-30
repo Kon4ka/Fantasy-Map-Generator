@@ -1,6 +1,12 @@
 import { max, pack as packLayout, select, stratify } from "d3";
 import { createAnnexMode } from "@/components/annex-mode";
-import { closeDialogs, confirmationDialog, destroyDialog, updateDialog } from "@/components/dialog/dialog-helpers";
+import {
+  alertDialog,
+  closeDialogs,
+  confirmationDialog,
+  destroyDialog,
+  updateDialog
+} from "@/components/dialog/dialog-helpers";
 import { applyLineHighlighting } from "@/components/dialog/highlighting";
 import { bindColumnSorting, sortDataByColumns } from "@/components/dialog/sorting";
 import {
@@ -25,7 +31,7 @@ import { clearLegend, drawLegend, hasLegend } from "@/renderers/draw-legend";
 import { EmblemRenderer } from "@/renderers/emblems/renderer";
 import { fog, unfog } from "@/renderers/overlays/fogging";
 import { highlightElement, highlightOutline } from "@/renderers/overlays/highlight";
-import { translateDataTerm } from "@/services/localization";
+import { translate, translateDataTerm } from "@/services/localization";
 import { applyOption, downloadFile, getArea, getAreaUnit, getFileName, speak } from "@/utils";
 import {
   ensureEl,
@@ -965,7 +971,7 @@ function stateRemovePrompt(state: number): void {
   });
 }
 
-function stateRemove(stateId: number): void {
+function stateRemove(stateId: number, redraw = true): void {
   unfog(`focusState${stateId}`);
 
   pack.burgs.forEach(burg => {
@@ -1005,8 +1011,10 @@ function stateRemove(stateId: number): void {
 
   select("#debug").selectAll(".highlight").remove();
 
-  Layers.draw("burgIcons", "labels", "military", "borders", "provinces", "states");
-  refreshStatesEditor();
+  if (redraw) {
+    Layers.draw("burgIcons", "labels", "military", "borders", "provinces", "states");
+    refreshStatesEditor();
+  }
 }
 
 function toggleLegend(): void {
@@ -1256,7 +1264,7 @@ function openPaintEditor(): void {
       .map(state => ({ id: state.i, name: state.name, color: state.color || "#ffffff" })),
     dontOverrideControl: true,
     getValue: cell => pack.cells.state[cell],
-    filterCell: (cell, currentState) => isLand(cell, pack) && cell !== pack.states[currentState].center,
+    filterCell: cell => isLand(cell, pack),
     onApply: changes => applyStatesPaint(changes, adjustLabels)
   });
 }
@@ -1267,15 +1275,28 @@ function applyStatesPaint(changes: ReadonlyMap<number, number>, adjustLabels: bo
   const affectedProvinces: number[] = [];
 
   for (const [cell, state] of changes) {
-    affectedStates.push(cells.state[cell], state);
+    const previousState = cells.state[cell];
+    affectedStates.push(previousState, state);
     affectedProvinces.push(cells.province[cell]);
     cells.state[cell] = state;
-    if (cells.burg[cell]) pack.burgs[cells.burg[cell]].state = state;
+
+    const burgId = cells.burg[cell];
+    if (!burgId) continue;
+    const burg = pack.burgs[burgId];
+    if (burg.capital && previousState !== state) {
+      burg.capital = 0;
+      if (pack.states[previousState]?.capital === burgId) pack.states[previousState].capital = 0;
+      Burgs.changeGroup(burg, null);
+    }
+    burg.state = state;
   }
 
   if (affectedStates.length) {
-    States.getPoles();
+    const uniqueAffectedStates = [...new Set(affectedStates)];
     adjustProvinces([...new Set(affectedProvinces)]);
+    const removedStates = reconcilePaintedStates(uniqueAffectedStates);
+    States.getPoles();
+    States.findNeighbors();
     Layers.draw("states", "borders", "provinces");
 
     if (adjustLabels) {
@@ -1287,7 +1308,46 @@ function applyStatesPaint(changes: ReadonlyMap<number, number>, adjustLabels: bo
     }
 
     if (document.getElementById(dialogId)) refreshStatesEditor();
+    if (removedStates.length) {
+      window.setTimeout(
+        () =>
+          alertDialog({
+            title: translate("State removed"),
+            message: `${translate("The following states have no territory left and were removed")}: <b>${removedStates.join(", ")}</b>`
+          }),
+        0
+      );
+    }
   }
+}
+
+export function reconcilePaintedStates(stateIds: Iterable<number>): string[] {
+  const removedStates: string[] = [];
+
+  for (const stateId of stateIds) {
+    if (!stateId) continue;
+    const state = pack.states[stateId];
+    if (!state || state.removed) continue;
+
+    const territory = pack.cells.i.filter(cell => pack.cells.state[cell] === stateId);
+    if (!territory.length) {
+      removedStates.push(state.name);
+      stateRemove(stateId, false);
+      continue;
+    }
+
+    const capital = state.capital ? pack.burgs[state.capital] : undefined;
+    const validCapital =
+      capital && !capital.removed && capital.state === stateId && pack.cells.state[capital.cell] === stateId;
+    if (!validCapital) state.capital = 0;
+    if (pack.cells.state[state.center] === stateId) continue;
+
+    state.center = validCapital
+      ? capital.cell
+      : territory.reduce((best, cell) => (pack.cells.s[cell] > pack.cells.s[best] ? cell : best), territory[0]);
+  }
+
+  return removedStates;
 }
 
 function adjustProvinces(affectedProvinces: number[]): void {
