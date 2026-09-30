@@ -31,13 +31,27 @@ try {
 
   await page.evaluate(async () => {
     const geographyScale = 0.5;
-    const ellipse = (x, y, cx, cy, rx, ry) =>
-      1 - Math.hypot((x - cx) / (rx * geographyScale), (y - cy) / (ry * geographyScale));
-    const ridge = (x, y, ax, ay, bx, by, width) => {
-      const abx = bx - ax;
-      const aby = by - ay;
-      const t = Math.max(0, Math.min(1, ((x - ax) * abx + (y - ay) * aby) / (abx * abx + aby * aby)));
-      return Math.max(0, 1 - Math.hypot(x - (ax + abx * t), y - (ay + aby * t)) / (width * geographyScale));
+    const scaled = (value, center) => center + (value - center) * geographyScale;
+    const ellipse = (x, y, cx, cy, rx, ry, groupX = cx, groupY = cy) => {
+      const scaledX = scaled(cx, groupX);
+      const scaledY = scaled(cy, groupY);
+      return 1 - Math.hypot((x - scaledX) / (rx * geographyScale), (y - scaledY) / (ry * geographyScale));
+    };
+    const ridge = (x, y, ax, ay, bx, by, width, groupX, groupY) => {
+      const scaledAx = scaled(ax, groupX);
+      const scaledAy = scaled(ay, groupY);
+      const scaledBx = scaled(bx, groupX);
+      const scaledBy = scaled(by, groupY);
+      const abx = scaledBx - scaledAx;
+      const aby = scaledBy - scaledAy;
+      const t = Math.max(
+        0,
+        Math.min(1, ((x - scaledAx) * abx + (y - scaledAy) * aby) / (abx * abx + aby * aby))
+      );
+      return Math.max(
+        0,
+        1 - Math.hypot(x - (scaledAx + abx * t), y - (scaledAy + aby * t)) / (width * geographyScale)
+      );
     };
 
     const islands = [
@@ -62,6 +76,8 @@ try {
     const originalGenerate = HeightmapGenerator.generate;
     HeightmapGenerator.generate = function () {
       const heights = new Uint8Array(grid.points.length);
+      const valeynCenter = [0.5, 0.255];
+      const kaishiCenter = [0.53, 0.79];
       for (let i = 0; i < grid.points.length; i++) {
         const [px, py] = grid.points[i];
         const x = px / options.map.graph.width;
@@ -72,20 +88,22 @@ try {
           Math.sin((x + y) * 137) * 0.006;
 
         const valeyn = Math.max(
-          ellipse(x, y, 0.5, 0.235, 0.39, 0.19),
-          ellipse(x, y, 0.19, 0.285, 0.13, 0.135),
-          ellipse(x, y, 0.82, 0.285, 0.12, 0.14),
-          ellipse(x, y, 0.49, 0.39, 0.245, 0.07)
+          ellipse(x, y, 0.5, 0.235, 0.39, 0.19, ...valeynCenter),
+          ellipse(x, y, 0.19, 0.285, 0.13, 0.135, ...valeynCenter),
+          ellipse(x, y, 0.82, 0.285, 0.12, 0.14, ...valeynCenter),
+          ellipse(x, y, 0.49, 0.39, 0.245, 0.07, ...valeynCenter)
         );
         const equatorial = Math.max(...islands.map(([cx, cy, rx, ry]) => ellipse(x, y, cx, cy, rx, ry)));
-        const southern = Math.max(...kaishi.map(([cx, cy, rx, ry]) => ellipse(x, y, cx, cy, rx, ry)));
+        const southern = Math.max(
+          ...kaishi.map(([cx, cy, rx, ry]) => ellipse(x, y, cx, cy, rx, ry, ...kaishiCenter))
+        );
         const land = Math.max(valeyn, equatorial, southern) + coastNoise;
         if (land <= 0) continue;
 
         let elevation = 21 + Math.round(Math.min(1, land * 2.5) * 22);
-        elevation += Math.round(ridge(x, y, 0.26, 0.17, 0.75, 0.17, 0.026) * 30);
-        elevation += Math.round(ridge(x, y, 0.72, 0.69, 0.86, 0.79, 0.032) * 38);
-        elevation += Math.round(ridge(x, y, 0.34, 0.73, 0.5, 0.86, 0.028) * 20);
+        elevation += Math.round(ridge(x, y, 0.26, 0.17, 0.75, 0.17, 0.026, ...valeynCenter) * 30);
+        elevation += Math.round(ridge(x, y, 0.72, 0.69, 0.86, 0.79, 0.032, ...kaishiCenter) * 38);
+        elevation += Math.round(ridge(x, y, 0.34, 0.73, 0.5, 0.86, 0.028, ...kaishiCenter) * 20);
         if (y < 0.43 && x < 0.31) elevation = Math.min(elevation, 35);
         if (y < 0.43 && x > 0.34 && x < 0.7) elevation = Math.min(elevation, 31);
         heights[i] = Math.max(20, Math.min(95, elevation));
@@ -112,6 +130,8 @@ try {
   });
 
   const summary = await page.evaluate(() => {
+    pack.ice = [];
+    document.querySelector("#ice")?.replaceChildren();
     const width = options.map.graph.width;
     const height = options.map.graph.height;
     const normalized = (x, y) => [x / width, y / height];
