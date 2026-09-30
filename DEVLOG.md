@@ -34,6 +34,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
 - Generated map content localization is centralized in `src/services/russian-map-content.ts`: proper names and name-base corpora are transliterated to Cyrillic on map load/generation.
 - Domain terminology is centralized in `ru.json` under `dataMessages` and `dataPatterns`; internal English IDs remain unchanged for compatibility.
+- The launcher selects the newest `.map` from the user Downloads folder or `worlds/kontar` instead of a hard-coded draft.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -48,6 +49,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Launcher self-test — detected `DISPLAY2`, loaded `kontar-first-rift-draft.map`, saved a `.map` through the browser, and shut down cleanly
 - Heightmap localization regression — 4 focused tests passed; Russian catalog check and production build passed
 - Russian data-editor browser audit — biomes, zones, features, markers, trade animation, name bases, provinces, religions, and states contain no remaining Latin-script values
+- Latest-save cleanup round-trip — 17 states preserved; 306 burgs, 232 routes, and 12 markets reduced to 0; launcher dry-run selects the cleaned map
 
 ## Working rules
 
@@ -102,3 +104,4 @@ npm test -- --run
 - 2026-09-30 — fixed Playwright downloads being trapped under UUID names in its temporary folder; launcher now copies them to the real Downloads folder with the suggested filename.
 - 2026-09-30 — fixed Russian localization preventing `Risk`, `Keep`, and `Erase` heightmap edits from being applied on exit.
 - 2026-09-30 — completed Russian data terminology and added Cyrillic transliteration for generated names and all name-base corpora.
+- 2026-09-30 — changed the launcher to open the latest saved map and added a verified cleanup script for settlements and routes.

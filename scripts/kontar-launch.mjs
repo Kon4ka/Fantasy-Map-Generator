@@ -6,7 +6,6 @@ import { chromium } from "playwright";
 
 const root = path.resolve(import.meta.dirname, "..");
 const appUrl = "http://127.0.0.1:5173/Fantasy-Map-Generator/";
-const mapPath = path.join(root, "worlds", "kontar", "kontar-first-rift-draft.map");
 const logDir = path.join(process.env.LOCALAPPDATA ?? root, "Kontar");
 const logPath = path.join(logDir, "launcher.log");
 const dryRun = process.argv.includes("--dry-run");
@@ -81,6 +80,23 @@ const getDownloadsDirectory = () => {
   return path.join(process.env.USERPROFILE ?? root, "Downloads");
 };
 
+const getLatestMapPath = () => {
+  const directories = [getDownloadsDirectory(), path.join(root, "worlds", "kontar")];
+  const maps = directories.flatMap(directory => {
+    if (!fs.existsSync(directory)) return [];
+    return fs
+      .readdirSync(directory, { withFileTypes: true })
+      .filter(entry => entry.isFile() && path.extname(entry.name).toLowerCase() === ".map")
+      .map(entry => {
+        const filePath = path.join(directory, entry.name);
+        return { filePath, modified: fs.statSync(filePath).mtimeMs };
+      });
+  });
+  const latest = maps.sort((a, b) => b.modified - a.modified)[0];
+  if (!latest) throw new Error("Не найдено ни одного файла карты в папке загрузок или worlds/kontar");
+  return latest.filePath;
+};
+
 const getAvailableDownloadPath = (downloadsDirectory, suggestedFilename) => {
   const safeFilename = (suggestedFilename || "kontar-map.map")
     .replace(/[<>:"/\\|?*]/g, "_")
@@ -123,6 +139,7 @@ let server;
 let browser;
 
 try {
+  const mapPath = getLatestMapPath();
   if (!fs.existsSync(mapPath)) throw new Error(`Не найдена карта: ${mapPath}`);
   const screen = getTargetScreen();
   const browserPath = getBrowserPath();
