@@ -24,6 +24,7 @@ import { redrawEmblem, redrawEmblems, removeEmblem } from "@/renderers/draw-embl
 import { EmblemRenderer } from "@/renderers/emblems/renderer";
 import { fog, unfog } from "@/renderers/overlays/fogging";
 import { highlightElement, highlightOutline } from "@/renderers/overlays/highlight";
+import { translateDataTerm } from "@/services/localization";
 import { applyOption, downloadFile, getArea, getAreaUnit, getFileName, speak } from "@/utils";
 import { ensureEl, findEl, getPointer, getRandomColor, isLand, P, rand, rn, si, unique } from "../utils";
 
@@ -323,7 +324,7 @@ function renderProvincesPage(view: TableView<Province>): void {
       <fill-box data-col="color" fill="${p.color}"></fill-box>
       <input data-col="name" data-tip="Province name. Click to change" class="name pointer" value="${p.name}" readonly />
       <svg data-col="emblem" data-tip="Click to show and edit province emblem" class="coaIcon pointer" viewBox="0 0 200 200"><use href="#provinceCOA${p.i}"></use></svg>
-      <input data-col="form" data-tip="Province form name. Click to change" class="name pointer" value="${p.formName}" readonly />
+      <input data-col="form" data-tip="Province form name. Click to change" class="name pointer" value="${translateDataTerm(p.formName)}" readonly />
       <div data-col="capital">
         <span data-tip="Province capital. Click to zoom into view" class="icon-star-empty pointer ${p.burg ? "" : "placeholder"}"></span>
         <select data-tip="Province capital. Click to select from burgs within the state. No capital means the province is governed from the state capital" class="cultureBase ${p.burgs!.length ? "" : "placeholder"}">${p.burgs!.length ? getCapitalOptions(p.burgs!, p.burg) : ""}</select>

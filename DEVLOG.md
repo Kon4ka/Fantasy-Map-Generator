@@ -32,6 +32,8 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, saves browser downloads to the real user Downloads folder, and stops its server when the browser closes.
 - Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
 - Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
+- Generated map content localization is centralized in `src/services/russian-map-content.ts`: proper names and name-base corpora are transliterated to Cyrillic on map load/generation.
+- Domain terminology is centralized in `ru.json` under `dataMessages` and `dataPatterns`; internal English IDs remain unchanged for compatibility.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -39,12 +41,13 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Node.js `24.11.1`
 - `npm run i18n:check` — passed, 0 missing strings
 - `npm run build` — passed
-- `npm test -- --run` — 105 files, 1194 tests passed
+- `npm test -- --run` — 106 files, 1198 tests passed
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
 - Round-trip counts — 2464 cells, 17 states, 14 cultures, 306 burgs, 77 rivers, 16 custom labels
 - Launcher self-test — detected `DISPLAY2`, loaded `kontar-first-rift-draft.map`, saved a `.map` through the browser, and shut down cleanly
 - Heightmap localization regression — 4 focused tests passed; Russian catalog check and production build passed
+- Russian data-editor browser audit — biomes, zones, features, markers, trade animation, name bases, provinces, religions, and states contain no remaining Latin-script values
 
 ## Working rules
 
@@ -98,3 +101,4 @@ npm test -- --run
 - 2026-09-30 — added and verified a one-click second-monitor launcher for the current Kontar map.
 - 2026-09-30 — fixed Playwright downloads being trapped under UUID names in its temporary folder; launcher now copies them to the real Downloads folder with the suggested filename.
 - 2026-09-30 — fixed Russian localization preventing `Risk`, `Keep`, and `Erase` heightmap edits from being applied on exit.
+- 2026-09-30 — completed Russian data terminology and added Cyrillic transliteration for generated names and all name-base corpora.

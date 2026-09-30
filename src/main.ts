@@ -18,8 +18,10 @@ import "@/generators/styles-legacy";
 
 import { boot } from "@/components/lifecycle";
 import { initializeLocalization } from "@/services/localization";
+import { initializeRussianMapContent } from "@/services/russian-map-content";
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeLocalization();
+  initializeRussianMapContent();
   void boot();
 });

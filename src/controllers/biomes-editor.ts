@@ -18,6 +18,7 @@ import { Controllers } from "@/controllers";
 import type { Biome } from "@/generators/biomes-generator";
 import { Population } from "@/generators/population-generator";
 import { clearLegend, drawLegend, hasLegend } from "@/renderers/draw-legend";
+import { translateDataTerm } from "@/services/localization";
 import type { PackedGraph } from "@/types/PackedGraph";
 import { downloadFile, getArea, getAreaUnit, getFileName, openURL } from "@/utils";
 import { ensureEl, getRandomColor, isLand, rn, si } from "../utils";
@@ -218,6 +219,7 @@ function biomesEditorAddLines(view: TableView<Biome>, statistics: BiomeStatistic
 
   for (const biome of view.rows) {
     const { i, name, color, habitability } = biome;
+    const localizedName = translateDataTerm(name);
     const { cells, area: rawArea, rural: rawRural, urban: rawUrban } = statistics[i];
     const area = getArea(rawArea);
     const rural = rawRural * options.map.units.population.scale;
@@ -237,7 +239,7 @@ function biomesEditorAddLines(view: TableView<Biome>, statistics: BiomeStatistic
       >
         <div data-col="name">
           <fill-box fill="${color}"></fill-box>
-          <input data-tip="Biome name. Click and type to change" class="biomeName" value="${name}" autocorrect="off" spellcheck="false" />
+          <input data-tip="Biome name. Click and type to change" class="biomeName" value="${localizedName}" autocorrect="off" spellcheck="false" />
         </div>
         <div data-col="habitability" class="hide">
           <span data-tip="Biome habitability percent">%</span>

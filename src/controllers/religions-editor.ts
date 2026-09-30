@@ -19,6 +19,7 @@ import { Controllers } from "@/controllers";
 import type { Religion } from "@/generators/religions-generator";
 import { clearLegend, drawLegend, hasLegend } from "@/renderers/draw-legend";
 import { highlightElement } from "@/renderers/overlays/highlight";
+import { translateDataTerm } from "@/services/localization";
 import { downloadFile, getArea, getAreaUnit, getFileName } from "@/utils";
 import { abbreviate, debounce, ensureEl, getPointer, isLand, parseTransform, rn, si } from "../utils";
 
@@ -317,7 +318,7 @@ function religionsEditorAddLines(view: TableView<Religion>): void {
         ${getTypeOptions(r.type)}
       </select>
       <input data-tip="Religion form" class="religionForm"
-        value="${r.form}" autocorrect="off" spellcheck="false" data-col="form" />
+        value="${translateDataTerm(r.form)}" autocorrect="off" spellcheck="false" data-col="form" />
       <div data-col="deity">
         <span data-tip="Click to re-generate supreme deity" class="icon-arrows-cw pointer"></span>
         <input data-tip="Religion supreme deity" class="religionDeity"

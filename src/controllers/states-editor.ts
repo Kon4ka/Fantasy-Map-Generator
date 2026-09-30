@@ -25,6 +25,7 @@ import { clearLegend, drawLegend, hasLegend } from "@/renderers/draw-legend";
 import { EmblemRenderer } from "@/renderers/emblems/renderer";
 import { fog, unfog } from "@/renderers/overlays/fogging";
 import { highlightElement, highlightOutline } from "@/renderers/overlays/highlight";
+import { translateDataTerm } from "@/services/localization";
 import { applyOption, downloadFile, getArea, getAreaUnit, getFileName, speak } from "@/utils";
 import {
   ensureEl,
@@ -339,7 +340,7 @@ function renderStatesPage(view: TableView<State>): void {
           s.name
         }" readonly data-col="name" />
         <svg class="coaIcon placeholder" viewBox="0 0 200 200" data-col="emblem"></svg>
-        <input class="stateForm placeholder" value="none" data-col="form" />
+        <input class="stateForm placeholder" value="${translateDataTerm("none")}" data-col="form" />
         <div data-col="capital">
           <span class="icon-star-empty placeholder"></span>
           <div class="stateCapital placeholder"></div>
@@ -397,9 +398,9 @@ function renderStatesPage(view: TableView<State>): void {
       <fill-box fill="${s.color}" data-col="color"></fill-box>
       <input data-tip="State name. Click to change" class="stateName name pointer" value="${s.name}" readonly data-col="name" />
       <svg data-tip="Click to show and edit state emblem" class="coaIcon pointer" viewBox="0 0 200 200" data-col="emblem"><use href="#stateCOA${s.i}"></use></svg>
-      <input data-tip="State form name. Click to change" class="stateForm name pointer" value="${
-        s.formName
-      }" readonly data-col="form" />
+      <input data-tip="State form name. Click to change" class="stateForm name pointer" value="${translateDataTerm(
+        s.formName ?? ""
+      )}" readonly data-col="form" />
       <div data-col="capital">
         <span data-tip="State capital. Click to zoom into view" class="icon-star-empty pointer"></span>
         <div data-tip="Capital name" class="stateCapital">${capital}</div>

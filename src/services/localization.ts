@@ -11,6 +11,8 @@ interface LocaleCatalog {
   locale: InterfaceLocale;
   name: string;
   messages: Record<string, string>;
+  dataMessages?: Record<string, string>;
+  dataPatterns?: LocalePattern[];
   patterns: LocalePattern[];
   ignored?: string[];
 }
@@ -34,6 +36,9 @@ const EXCLUDED_SELECTOR = [
 ].join(",");
 
 const compiledPatterns = ruLocale.patterns.map(({ source, target }) => ({ expression: new RegExp(source), target }));
+const dataMessages = new Map(
+  Object.entries(ruLocale.dataMessages ?? {}).map(([source, target]) => [normalize(source).toLocaleLowerCase("en"), target])
+);
 const sourceText = new WeakMap<Text, string>();
 const appliedText = new WeakMap<Text, string>();
 const sourceAttributes = new WeakMap<Element, Map<string, string>>();
@@ -46,7 +51,9 @@ let locale = resolveInitialLocale();
 let observer: MutationObserver | undefined;
 
 function resolveInitialLocale(): InterfaceLocale {
-  const requested = new URLSearchParams(location.search).get("lang") || localStorage.getItem(STORAGE_KEY);
+  const search = typeof location === "undefined" ? "" : location.search;
+  const stored = typeof localStorage === "undefined" ? null : localStorage.getItem(STORAGE_KEY);
+  const requested = new URLSearchParams(search).get("lang") || stored;
   return requested === "en" ? "en" : "ru";
 }
 
@@ -67,7 +74,7 @@ function recordMissing(value: string): void {
   missingTranslations.add(value);
   if (import.meta.env.DEV) {
     const serialized = JSON.stringify([...missingTranslations]);
-    sessionStorage.setItem("kontar.i18nMissing", serialized);
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("kontar.i18nMissing", serialized);
     document.documentElement.dataset.i18nMissing = serialized;
   }
 }
@@ -85,7 +92,7 @@ export function translate(source: string): string {
   if (!normalized) return source;
   if (ignored.has(normalized)) return source;
 
-  const exact = ruLocale.messages[normalized];
+  const exact = dataMessages.get(normalized.toLocaleLowerCase("en")) ?? ruLocale.messages[normalized];
   if (exact !== undefined) return `${leadingWhitespace}${exact}${trailingWhitespace}`;
 
   for (const { expression, target } of compiledPatterns) {
@@ -95,6 +102,15 @@ export function translate(source: string): string {
 
   if (isTranslationCandidate(normalized)) recordMissing(normalized);
   return source;
+}
+
+export function translateDataTerm(source: string): string {
+  if (locale === "en") return source;
+  const normalized = normalize(source);
+  if (!normalized) return source;
+  return (
+    dataMessages.get(normalized.toLocaleLowerCase("en")) ?? ruLocale.messages[normalized] ?? source
+  );
 }
 
 function translateTextNode(node: Text): void {
@@ -184,7 +200,7 @@ function handleMutations(mutations: MutationRecord[]): void {
 
 export function setLocale(nextLocale: InterfaceLocale): void {
   locale = nextLocale;
-  localStorage.setItem(STORAGE_KEY, locale);
+  if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, locale);
   document.documentElement.lang = locale;
   translateTree(document.body);
   window.dispatchEvent(new CustomEvent("interface:locale-changed", { detail: { locale } }));
@@ -201,7 +217,7 @@ export function getMissingTranslations(): string[] {
 export function initializeLocalization(): void {
   missingTranslations.clear();
   if (import.meta.env.DEV) {
-    sessionStorage.setItem("kontar.i18nMissing", "[]");
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("kontar.i18nMissing", "[]");
     document.documentElement.dataset.i18nMissing = "[]";
   }
   document.documentElement.lang = locale;
@@ -229,4 +245,6 @@ declare global {
   }
 }
 
-window.KontarI18n = { getLocale, getMissingTranslations, setLocale, translate };
+if (typeof window !== "undefined") {
+  window.KontarI18n = { getLocale, getMissingTranslations, setLocale, translate };
+}
