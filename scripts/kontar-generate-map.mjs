@@ -30,12 +30,14 @@ try {
   });
 
   await page.evaluate(async () => {
-    const ellipse = (x, y, cx, cy, rx, ry) => 1 - Math.hypot((x - cx) / rx, (y - cy) / ry);
+    const geographyScale = 0.5;
+    const ellipse = (x, y, cx, cy, rx, ry) =>
+      1 - Math.hypot((x - cx) / (rx * geographyScale), (y - cy) / (ry * geographyScale));
     const ridge = (x, y, ax, ay, bx, by, width) => {
       const abx = bx - ax;
       const aby = by - ay;
       const t = Math.max(0, Math.min(1, ((x - ax) * abx + (y - ay) * aby) / (abx * abx + aby * aby)));
-      return Math.max(0, 1 - Math.hypot(x - (ax + abx * t), y - (ay + aby * t)) / width);
+      return Math.max(0, 1 - Math.hypot(x - (ax + abx * t), y - (ay + aby * t)) / (width * geographyScale));
     };
 
     const islands = [

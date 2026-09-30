@@ -39,7 +39,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - `npm test -- --run` — 105 files, 1194 tests passed
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
-- Round-trip counts — 7584 cells, 17 states, 14 cultures, 1154 burgs, 137 rivers, 16 custom labels
+- Round-trip counts — 3598 cells, 17 states, 14 cultures, 375 burgs, 89 rivers, 16 custom labels
 
 ## Working rules
 
@@ -88,3 +88,4 @@ npm test -- --run
 - 2026-09-30 — added centralized Russian localization and completed build, test, and browser verification.
 - 2026-09-30 — established this development log as the cross-chat project memory.
 - 2026-09-30 — generated the first editable Kontar `.map` from the world notes and verified a clean save/load round-trip.
+- 2026-09-30 — reduced every landform to 50% around its existing center; regenerated and reverified the `.map`.
