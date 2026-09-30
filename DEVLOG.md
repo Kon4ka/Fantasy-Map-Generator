@@ -26,7 +26,10 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Translation architecture: `docs/architecture/localization.md`.
 - Coverage: 4418 exact messages, 3 patterns, 40 intentionally ignored names; static missing count is 0.
 - Map labels, user notes, editable content, and speech voices are intentionally not translated.
-- Kontar world data and the local MCP bridge have not been implemented yet.
+- First editable Kontar draft: `worlds/kontar/kontar-first-rift-draft.map`.
+- Vector reference: `worlds/kontar/reference/kontar-first-rift.svg`.
+- Reproducible generator: `scripts/kontar-generate-map.mjs`.
+- The local MCP bridge has not been implemented yet.
 
 ## Verified
 
@@ -35,6 +38,8 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - `npm run build` — passed
 - `npm test -- --run` — 105 files, 1194 tests passed
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
+- Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
+- Round-trip counts — 7584 cells, 17 states, 14 cultures, 1154 burgs, 137 rivers, 16 custom labels
 
 ## Working rules
 
@@ -64,19 +69,22 @@ npm test -- --run
 - The initial Russian catalog was machine-seeded and core terminology was reviewed manually. Rare dialogs may still need editorial polishing in `ru.json`.
 - `npm ci` currently reports 3 inherited audit findings: 1 low and 2 high. Do not run a breaking automatic fix without review.
 - The pre-commit lint hook can touch many upstream files because of line endings. Inspect `git status` after it runs and avoid committing unrelated formatting churn.
-- Decide whether Kontar `.map` files belong in Git only after checking their size and sensitivity; backups are required regardless.
+- The first `.map` draft is tracked in Git. Keep additional backups before manual edits.
+- This is a geographic baseline, not a canonical political map. Generated borders, settlements, minor names, and routes require review.
 
 ## Next work
 
-1. Define `worlds/kontar/`: source map, metadata, backups, and versioning policy.
-2. Inspect a real Kontar `.map` save and document the fields the integration must read.
-3. Build a read-only adapter that exports a stable Kontar snapshot from the map.
-4. Add a local MCP server with discovery and read-only world queries.
-5. Add validated, backup-first mutations for approved map operations.
-6. Add live synchronization with the browser/Electron app only after file-based integration is stable.
+1. Review and correct the draft's coastlines, scale, major relief, and island placement with the user.
+2. Replace generated borders, settlements, cultures, routes, and minor names with canonical Kontar data.
+3. Document the `.map` fields the integration must read.
+4. Build a read-only adapter that exports a stable Kontar snapshot from the map.
+5. Add a local MCP server with discovery and read-only world queries.
+6. Add validated, backup-first mutations for approved map operations.
+7. Add live synchronization with the browser/Electron app only after file-based integration is stable.
 
 ## History
 
 - 2026-09-30 — cloned upstream, renamed the official remote to `upstream`, created `codex/kontar-edition`.
 - 2026-09-30 — added centralized Russian localization and completed build, test, and browser verification.
 - 2026-09-30 — established this development log as the cross-chat project memory.
+- 2026-09-30 — generated the first editable Kontar `.map` from the world notes and verified a clean save/load round-trip.
