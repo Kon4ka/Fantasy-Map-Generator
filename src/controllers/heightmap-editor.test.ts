@@ -15,8 +15,18 @@ document.getElementById = (() =>
     classList: { add: () => {}, remove: () => {}, contains: () => false },
     style: {}
   }) as unknown as HTMLElement) as typeof document.getElementById;
-const { createAvailableLandCellFinder } = await import("./heightmap-editor");
+const { createAvailableLandCellFinder, getHeightmapEditMode, setHeightmapEditMode } = await import("./heightmap-editor");
 document.getElementById = originalGetElementById;
+
+describe("heightmap edit mode", () => {
+  it("keeps the internal mode when localization changes the visible label", () => {
+    const element = { dataset: {}, textContent: "" } as unknown as HTMLElement;
+    setHeightmapEditMode(element, "risk");
+    element.textContent = "риск";
+
+    expect(getHeightmapEditMode(element)).toBe("risk");
+  });
+});
 
 describe("createAvailableLandCellFinder", () => {
   const cells: Parameters<typeof createAvailableLandCellFinder>[0] = {

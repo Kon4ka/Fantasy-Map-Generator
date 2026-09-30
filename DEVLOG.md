@@ -31,6 +31,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Reproducible generator: `scripts/kontar-generate-map.mjs`.
 - One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, saves browser downloads to the real user Downloads folder, and stops its server when the browser closes.
 - Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
+- Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -43,6 +44,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
 - Round-trip counts — 2464 cells, 17 states, 14 cultures, 306 burgs, 77 rivers, 16 custom labels
 - Launcher self-test — detected `DISPLAY2`, loaded `kontar-first-rift-draft.map`, saved a `.map` through the browser, and shut down cleanly
+- Heightmap localization regression — 4 focused tests passed; Russian catalog check and production build passed
 
 ## Working rules
 
@@ -95,3 +97,4 @@ npm test -- --run
 - 2026-09-30 — scaled Valeyn and Kaishi as whole groups to 50%, kept equatorial islands centered, and removed generated sea ice.
 - 2026-09-30 — added and verified a one-click second-monitor launcher for the current Kontar map.
 - 2026-09-30 — fixed Playwright downloads being trapped under UUID names in its temporary folder; launcher now copies them to the real Downloads folder with the suggested filename.
+- 2026-09-30 — fixed Russian localization preventing `Risk`, `Keep`, and `Erase` heightmap edits from being applied on exit.

@@ -51,6 +51,7 @@ const heightColor = scaleSequential(interpolateSpectral);
 declare const prompt: (text: string, options: PromptOptions, callback: (value: string | number) => void) => void;
 
 type FilterState = { cellType: "all" | "land" | "water" };
+type HeightmapEditMode = "erase" | "keep" | "risk";
 const dialogId = "heightmapEditor";
 const EDITOR_OPTIONS = ["renderOcean", "showDrainage", "allowErosion"] as const; // the customization menu checkboxes
 const historyLimit = 100;
@@ -58,7 +59,17 @@ let filterState: FilterState;
 let templateInput: HTMLInputElement | null = null;
 let converterInput: HTMLInputElement | null = null;
 
-function open(options?: { mode?: string; tool?: string }): void {
+export const setHeightmapEditMode = (element: HTMLElement, mode: HeightmapEditMode): void => {
+  element.dataset.mode = mode;
+  element.textContent = mode;
+};
+
+export const getHeightmapEditMode = (element: HTMLElement): HeightmapEditMode | undefined => {
+  const mode = element.dataset.mode || element.textContent?.trim();
+  return mode === "erase" || mode === "keep" || mode === "risk" ? mode : undefined;
+};
+
+function open(options?: { mode?: HeightmapEditMode; tool?: string }): void {
   filterState = dialogState.get(dialogId, "filters", (): FilterState => ({ cellType: "all" }));
   if (!(["all", "land", "water"] as string[]).includes(filterState.cellType)) filterState.cellType = "all";
   dialogState.set(dialogId, "filters", filterState);
@@ -326,7 +337,7 @@ function toggleDrainage(): void {
 function redrawDrainage(): void {
   if (customization !== 1 || !options.app.heightmapEditor.showDrainage) return;
   // erosion turns deep depressions into lakes, but not in Keep mode where it never runs
-  const mode = ensureEl("heightmapEditMode").innerHTML;
+  const mode = getHeightmapEditMode(ensureEl("heightmapEditMode"));
   drawDrainage(mode !== "keep" && options.app.heightmapEditor.allowErosion);
 }
 
@@ -357,7 +368,7 @@ function showModeDialog(tool?: string): void {
   });
 }
 
-function enterHeightmapEditMode(mode: string, tool?: string): void {
+function enterHeightmapEditMode(mode: HeightmapEditMode, tool?: string): void {
   storedLayers = Layers.state.active;
   Layers.set([]); // turn off all layers
 
@@ -373,7 +384,7 @@ function enterHeightmapEditMode(mode: string, tool?: string): void {
   ensureEl("options").querySelector(".tab > .active")!.classList.remove("active");
   ensureEl("customizationMenu").style.display = "block";
   ensureEl("toolsTab").classList.add("active");
-  ensureEl("heightmapEditMode").innerHTML = mode;
+  setHeightmapEditMode(ensureEl("heightmapEditMode"), mode);
   for (const key of EDITOR_OPTIONS) ensureEl<HTMLInputElement>(key).checked = options.app.heightmapEditor[key];
 
   if (mode === "erase") {
@@ -509,7 +520,7 @@ async function finalizeHeightmap(): Promise<void> {
     void Controllers.View3d.enterStandard();
   }
 
-  const mode = ensureEl("heightmapEditMode").innerHTML;
+  const mode = getHeightmapEditMode(ensureEl("heightmapEditMode"));
 
   try {
     if (mode === "erase") await regenerateErasedData();
@@ -1401,7 +1412,7 @@ function changeHeightForSelection(selection: number[], start: number): void {
 
 function cellTypeFilterChange(): void {
   const cellTypeFilter = ensureEl<HTMLSelectElement>("cellTypeFilter");
-  if (cellTypeFilter.value === "land" && ensureEl("heightmapEditMode").innerHTML === "keep") {
+  if (cellTypeFilter.value === "land" && getHeightmapEditMode(ensureEl("heightmapEditMode")) === "keep") {
     tip("You cannot change the coastline in 'Keep' edit mode", false, "error");
     cellTypeFilter.value = "all";
   }
