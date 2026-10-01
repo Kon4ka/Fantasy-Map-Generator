@@ -136,7 +136,7 @@ const stopProcessTree = child => {
 };
 
 let server;
-let browser;
+let context;
 
 try {
   const mapPath = getLatestMapPath();
@@ -169,18 +169,21 @@ try {
     }
 
     await waitForServer();
-    browser = await chromium.launch({
-      headless: testRun,
-      executablePath: browserPath,
-      args: [
-        `--window-position=${screen.X},${screen.Y}`,
-        `--window-size=${screen.Width},${screen.Height}`,
-        "--disable-session-crashed-bubble"
-      ]
-    });
-    const context = await browser.newContext({ viewport: null });
+    const profilePath = path.join(logDir, testRun ? "test-browser-profile" : "browser-profile");
+    const launchContext = () =>
+      chromium.launchPersistentContext(profilePath, {
+        headless: testRun,
+        executablePath: browserPath,
+        viewport: null,
+        args: [
+          `--window-position=${screen.X},${screen.Y}`,
+          `--window-size=${screen.Width},${screen.Height}`,
+          "--disable-session-crashed-bubble"
+        ]
+      });
+    context = await launchContext();
     await context.addInitScript(() => localStorage.setItem("version", "99.99.99"));
-    const page = await context.newPage();
+    const page = context.pages()[0] ?? (await context.newPage());
     const downloadsDirectory = getDownloadsDirectory();
     fs.mkdirSync(downloadsDirectory, { recursive: true });
     const pendingDownloads = new Set();
@@ -213,24 +216,50 @@ try {
     log("Карта Контара открыта");
 
     if (testRun) {
+      await page.evaluate(() => {
+        const picker = document.querySelector('[data-option="themeColor"]');
+        picker.value = "#101820";
+        picker.dispatchEvent(new Event("input", { bubbles: true }));
+        picker.dispatchEvent(new Event("change", { bubbles: true }));
+        Options.persist();
+        if (getComputedStyle(document.getElementById("options")).color !== "rgb(255, 255, 255)") {
+          throw new Error("Текст тёмной панели не стал белым");
+        }
+      });
       const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
       await page.evaluate(() => window.Services.Save.toMachine());
       const testDownloadPath = await saveDownload(await downloadPromise);
       if (!fs.existsSync(testDownloadPath)) throw new Error("Самопроверка не обнаружила сохранённый файл карты");
       fs.unlinkSync(testDownloadPath);
-      await browser.close();
+      await context.close();
+      context = await launchContext();
+      const restoredPage = context.pages()[0] ?? (await context.newPage());
+      await restoredPage.goto(appUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+      await restoredPage.waitForFunction(() => window.options?.app?.ui?.themeColor === "#101820");
+      await restoredPage.evaluate(() => {
+        if (getComputedStyle(document.getElementById("options")).color !== "rgb(255, 255, 255)") {
+          throw new Error("Контраст темы не восстановился после перезапуска браузера");
+        }
+        const picker = document.querySelector('[data-option="themeColor"]');
+        picker.value = "#ffffff";
+        picker.dispatchEvent(new Event("input", { bubbles: true }));
+        if (getComputedStyle(document.getElementById("options")).color !== "rgb(0, 0, 0)") {
+          throw new Error("Текст светлой панели не стал чёрным");
+        }
+      });
+      await context.close();
       if (ownsServer) stopProcessTree(server);
-      log("Самопроверка запуска и сохранения завершена успешно");
+      log("Самопроверка запуска, сохранения, контраста и восстановления темы завершена успешно");
       process.exit(0);
     }
 
-    await new Promise(resolve => browser.once("disconnected", resolve));
+    await new Promise(resolve => context.once("close", resolve));
     await Promise.allSettled([...pendingDownloads]);
     if (ownsServer) stopProcessTree(server);
   }
 } catch (error) {
   fail(error);
-  if (browser?.isConnected()) await browser.close().catch(() => {});
+  if (context) await context.close().catch(() => {});
   stopProcessTree(server);
   process.exitCode = 1;
 } finally {

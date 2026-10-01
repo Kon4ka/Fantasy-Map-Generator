@@ -219,6 +219,22 @@ describe("options tab bindings", () => {
     expect(document.documentElement.style.getPropertyValue("--bg-opacity")).toBe("0.7");
   });
 
+  it("persists the theme and selects readable text for dark and light colors", () => {
+    edit(control("themeColor"), "#101820", "change");
+    expect(document.documentElement.style.getPropertyValue("--text-light")).toBe("#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--text-header")).toBe("#ffffff");
+
+    options = Options.getDefaultOptions();
+    Options.restore();
+    tab.syncOptionInputs();
+    expect(options.app.ui.themeColor).toBe("#101820");
+    expect(document.documentElement.style.getPropertyValue("--text-main")).toBe("#ffffff");
+
+    edit(control("themeColor"), "#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--text-main")).toBe("#000000");
+    expect(document.documentElement.style.getPropertyValue("--text-header")).toBe("#000000");
+  });
+
   it("still pairs unbound legacy controls by ID", () => {
     const input = document.getElementById("pngResolutionInput") as HTMLInputElement;
     edit(input, "3");

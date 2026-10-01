@@ -926,9 +926,24 @@ function changeDialogsTheme(themeColor: string, transparency: number): void {
     ["--header", hsl(h, s, l - 0.03, alphaReduced).toString()],
     ["--header-active", hsl(h, s, l - 0.09, alphaReduced).toString()],
     ["--bg-disabled", hsl(h, s - 0.04, l + 0.09).toString()],
-    ["--bg-dialogs", hsl(0, 0, 0.98, alpha).toString()]
+    ["--bg-dialogs", hsl(0, 0, 0.98, alpha).toString()],
+    ["--text-main", contrastingText(themeColor)],
+    ["--text-light", contrastingText(hsl(h, s - 0.02, l + 0.06).hex())],
+    ["--text-header", contrastingText(hsl(h, s, l - 0.03).hex())],
+    ["--text-header-active", contrastingText(hsl(h, s, l - 0.09).hex())],
+    ["--text-disabled", contrastingText(hsl(h, s - 0.04, l + 0.09).hex())]
   ];
   for (const [name, value] of variables) document.documentElement.style.setProperty(name, value);
+}
+
+function contrastingText(background: string): string {
+  const { r, g, b } = hsl(background).rgb();
+  const linear = (channel: number): number => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+  return 1.05 / (luminance + 0.05) > (luminance + 0.05) / 0.05 ? "#ffffff" : "#000000";
 }
 
 function changeZoomExtent(value: string): void {

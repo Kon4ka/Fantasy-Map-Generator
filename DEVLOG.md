@@ -32,6 +32,8 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Saved-map label repair: `scripts/kontar-repair-labels.mjs` names Valeyn and Kaishi, names single-state islands after their state, and marks only unresolved feature names with `()`.
 - One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, saves browser downloads to the real user Downloads folder, and stops its server when the browser closes.
 - Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
+- Launcher browser profile: `%LOCALAPPDATA%\Kontar\browser-profile`; app preferences now survive closing and reopening. Self-tests use a separate profile.
+- UI text contrast is computed from background luminance: panels and headers choose black or white independently; light input fields keep black text.
 - Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
 - Generated map content localization is centralized in `src/services/russian-map-content.ts`: proper names and name-base corpora are transliterated to Cyrillic on map load/generation.
 - Domain terminology is centralized in `ru.json` under `dataMessages` and `dataPatterns`; internal English IDs remain unchanged for compatibility.
@@ -60,6 +62,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Legacy-label migration regression — duplicate manual state names are removed while non-state geographic labels are preserved
 - Saved-map label repair — verifies Valeyn, Kaishi, single-state islands, and unresolved geographic placeholders independently
 - Sole-capital removal regression — deleting the last burg clears state and province capital references
+- Theme regression — 15 options-panel tests passed; launcher self-test verified dark/light text colors and restored the theme after closing and reopening the browser.
 
 ## Working rules
 
@@ -121,3 +124,4 @@ npm test -- --run
 - 2026-10-01 — added a verified saved-map migration for state labels and geographic-name placeholders.
 - 2026-10-01 — corrected geographic placeholders to feature names and allowed confirmed removal of a state's only burg.
 - 2026-10-01 — refined feature naming: Valeyn and Kaishi are canonical, while single-state islands inherit state names.
+- 2026-10-01 — switched the launcher from temporary to persistent browser storage and added automatic contrasting UI text.
