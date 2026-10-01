@@ -893,6 +893,12 @@ class BurgModule {
     const burg = pack.burgs[burgId];
     if (!burg) return window.tip(`Burg ${burgId} not found`, false, "error");
 
+    if (burg.capital && burg.state && pack.states[burg.state]?.capital === burgId) {
+      pack.states[burg.state].capital = 0;
+      burg.capital = 0;
+    }
+    for (const province of pack.provinces || []) if (province?.burg === burgId) province.burg = 0;
+
     pack.cells.burg[burg.cell] = 0;
     burg.removed = true;
     delete burg.note;

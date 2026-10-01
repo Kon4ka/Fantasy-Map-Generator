@@ -24,12 +24,12 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - All translations live in `src/data/locales/ru.json`; runtime logic is in `src/services/localization.ts`.
 - Catalog maintenance: `scripts/i18n-extract.mjs`, `scripts/i18n-generate-ru.mjs`.
 - Translation architecture: `docs/architecture/localization.md`.
-- Coverage: 4422 exact messages, 3 patterns, 40 intentionally ignored names; static missing count is 0.
+- Coverage: 4423 exact messages, 3 patterns, 40 intentionally ignored names; static missing count is 0.
 - Map labels, user notes, editable content, and speech voices are intentionally not translated.
 - First editable Kontar draft: `worlds/kontar/kontar-first-rift-draft.map`.
 - Vector reference: `worlds/kontar/reference/kontar-first-rift.svg`.
 - Reproducible generator: `scripts/kontar-generate-map.mjs`.
-- Saved-map label repair: `scripts/kontar-repair-labels.mjs` migrates manual state-name labels and marks remaining geographic labels with `()`.
+- Saved-map label repair: `scripts/kontar-repair-labels.mjs` migrates manual state-name labels and marks geographic feature names with `()`.
 - One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, saves browser downloads to the real user Downloads folder, and stops its server when the browser closes.
 - Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
 - Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
@@ -39,6 +39,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - State painting can capture hidden state-center cells; centers relocate to remaining territory, and states with no territory are removed with a warning.
 - `Win+Shift+S` is reserved for Windows screenshots; the states editor has an explicit action to refit all state labels immediately.
 - State-label refitting migrates legacy manual labels that duplicate state names, enables the real state-label group, and preserves geographic labels.
+- A state's only capital burg can be deleted after confirmation; state and province capital references are cleared safely.
 - The local MCP bridge has not been implemented yet.
 
 ## Verified
@@ -46,7 +47,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - Node.js `24.11.1`
 - `npm run i18n:check` — passed, 0 missing strings
 - `npm run build` — passed
-- `npm test -- --run` — 107 files, 1203 tests passed
+- `npm test -- --run` — 107 files, 1204 tests passed
 - Manual browser QA — main menu translated; `ru → en → ru` switching works
 - Kontar draft round-trip — generated, saved, and loaded back without page or integrity errors
 - Round-trip counts — 2464 cells, 17 states, 14 cultures, 306 burgs, 77 rivers, 16 custom labels
@@ -57,7 +58,8 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - State-center paint regression — captured centers relocate, and states reduced to zero cells are safely removed
 - Shortcut / label regression — `Win+Shift+S` triggers no app command; one action refits every active state label
 - Legacy-label migration regression — duplicate manual state names are removed while non-state geographic labels are preserved
-- Saved-map label repair — verifies state labels are active, duplicates are removed, and geographic placeholders are marked
+- Saved-map label repair — verifies state labels are active, duplicates are removed, and geographic feature placeholders are marked
+- Sole-capital removal regression — deleting the last burg clears state and province capital references
 
 ## Working rules
 
@@ -117,3 +119,4 @@ npm test -- --run
 - 2026-10-01 — fixed the Windows screenshot shortcut conflict and added one-click refitting for all state labels.
 - 2026-10-01 — made state-label refitting migrate legacy manual state-name labels and enable the real state-label group.
 - 2026-10-01 — added a verified saved-map migration for state labels and geographic-name placeholders.
+- 2026-10-01 — corrected geographic placeholders to feature names and allowed confirmed removal of a state's only burg.

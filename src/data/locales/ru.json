@@ -373,6 +373,7 @@
     "Are you sure you want to regenerate production and trade for all goods? Generation will be based on the current Goods settings and bonus goods placement": "Вы уверены, что хотите восстановить производство и торговлю всеми товарами? Генерация будет основываться на текущих настройках товаров и размещении бонусных товаров.",
     "Are you sure you want to remove all non-locked markers? The action cannot be reverted": "Вы уверены, что хотите удалить все незаблокированные маркеры? Действие нельзя отменить",
     "Are you sure you want to remove the burg? <br>This action cannot be reverted": "Вы уверены, что хотите удалить поселение? <br>Это действие нельзя отменить.",
+    "Are you sure you want to remove the only burg and leave the state without a capital? <br>This action cannot be reverted": "Удалить единственное поселение и оставить государство без столицы? <br>Это действие нельзя отменить.",
     "Are you sure you want to remove the culture? <br>This action cannot be reverted": "Вы уверены, что хотите удалить культуру? <br>Это действие нельзя отменить.",
     "Are you sure you want to remove the entire route group? All routes in this group will be removed.<br>This action can't be reverted": "Вы уверены, что хотите удалить всю группу маршрутов? Все маршруты в этой группе будут удалены.<br>Это действие нельзя отменить.",
     "Are you sure you want to remove the group? <br>This WON'T change the burgs unless the changes are applied": "Вы уверены, что хотите удалить группу? <br>Это НЕ изменит поселения, пока изменения не будут применены.",

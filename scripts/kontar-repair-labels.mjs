@@ -70,10 +70,15 @@ try {
     pack.addedLabels = pack.addedLabels
       .filter(({ label }) => !stateNames.has(normalize(label.text)))
       .map(addedLabel => {
-        const text = addedLabel.label.text?.trim() || "";
-        if (text.startsWith("()")) return addedLabel;
-        return { ...addedLabel, label: { ...addedLabel.label, text: `() ${text}`.trimEnd() } };
+        const text = addedLabel.label.text?.trim().replace(/^\(\)\s*/, "") || "";
+        return { ...addedLabel, label: { ...addedLabel.label, text } };
       });
+
+    const geographicFeatures = pack.features.filter(feature => feature?.name);
+    geographicFeatures.forEach(feature => {
+      const name = feature.name.trim().replace(/^\(\)\s*/, "");
+      feature.name = `() ${name}`;
+    });
 
     States.collectStatistics();
     States.getPoles();
@@ -84,7 +89,8 @@ try {
     return {
       states: states.length,
       migratedStateLabels: removed,
-      geographicLabels: pack.addedLabels.map(({ label }) => label.text)
+      restoredMapLabels: pack.addedLabels.map(({ label }) => label.text),
+      geographicFeatures: geographicFeatures.map(({ name }) => name)
     };
   });
 
@@ -102,9 +108,12 @@ try {
       states: states.length,
       activeStateLabels: options.map.labels.groups.filter(group => group.type === "state").every(group => group.active !== false),
       duplicateStateLabels: pack.addedLabels.filter(({ label }) => stateNames.has(normalize(label.text))).map(label => label.label.text),
-      unmarkedGeographicLabels: pack.addedLabels
-        .filter(({ label }) => !label.text?.trim().startsWith("()"))
-        .map(label => label.label.text)
+      wronglyMarkedMapLabels: pack.addedLabels
+        .filter(({ label }) => label.text?.trim().startsWith("()"))
+        .map(label => label.label.text),
+      unmarkedGeographicFeatures: pack.features
+        .filter(feature => feature?.name && !feature.name.trim().startsWith("()"))
+        .map(feature => feature.name)
     };
   });
 
@@ -112,7 +121,8 @@ try {
     verification.states !== result.states ||
     !verification.activeStateLabels ||
     verification.duplicateStateLabels.length ||
-    verification.unmarkedGeographicLabels.length
+    verification.wronglyMarkedMapLabels.length ||
+    verification.unmarkedGeographicFeatures.length
   ) {
     throw new Error(`Проверка исправленной карты не пройдена: ${JSON.stringify(verification)}`);
   }

@@ -62,6 +62,33 @@ function makeBurgs() {
   ];
 }
 
+describe("BurgsModule.remove", () => {
+  let Burgs: any;
+
+  beforeEach(async () => {
+    globalThis.window = globalThis.window || ({} as any);
+    await import("./burgs-generator");
+    Burgs = (globalThis as any).Burgs;
+    globalThis.pack = {
+      burgs: [0, { i: 1, cell: 1, state: 1, capital: 1, coa: {}, note: "Capital" }],
+      cells: { burg: new Uint16Array([0, 1]) },
+      states: [{ i: 0 }, { i: 1, capital: 1 }],
+      provinces: [0, { i: 1, burg: 1 }]
+    } as any;
+  });
+
+  it("clears state and province references when the only capital is removed", () => {
+    Burgs.remove(1);
+
+    expect(pack.cells.burg[1]).toBe(0);
+    expect(pack.states[1].capital).toBe(0);
+    expect(pack.provinces[1].burg).toBe(0);
+    expect(pack.burgs[1]).toMatchObject({ removed: true, capital: 0 });
+    expect(pack.burgs[1].coa).toBeUndefined();
+    expect(pack.burgs[1].note).toBeUndefined();
+  });
+});
+
 // ---------------------------------------------------------------------------
 
 describe("BurgsModule.assignPorts — open-lake port promotion", () => {

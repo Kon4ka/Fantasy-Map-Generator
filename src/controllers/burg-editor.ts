@@ -813,8 +813,11 @@ function showProductionOverview(): void {
 function removeSelectedBurg(): void {
   const burgId = getSelectedId();
   const burg = pack.burgs[burgId];
+  const isOnlyStateBurg =
+    burg.capital &&
+    !pack.burgs.some(other => other.i && !other.removed && other.i !== burgId && other.state === burg.state);
 
-  if (burg.capital) {
+  if (burg.capital && !isOnlyStateBurg) {
     alertMessage.innerHTML = /* html */ `You cannot remove the capital. You must change the state capital first`;
     $("#alert").dialog({
       resizable: false,
@@ -839,7 +842,9 @@ function removeSelectedBurg(): void {
   } else {
     confirmationDialog({
       title: "Remove burg",
-      message: "Are you sure you want to remove the burg? <br>This action cannot be reverted",
+      message: isOnlyStateBurg
+        ? "Are you sure you want to remove the only burg and leave the state without a capital? <br>This action cannot be reverted"
+        : "Are you sure you want to remove the burg? <br>This action cannot be reverted",
       confirm: "Remove",
       onConfirm: () => {
         Burgs.remove(burgId);
