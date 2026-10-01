@@ -75,9 +75,32 @@ try {
       });
 
     const geographicFeatures = pack.features.filter(feature => feature?.name);
+    const landFeatures = geographicFeatures.filter(feature => feature.type === "island").sort((a, b) => b.area - a.area);
+    const valeyn = landFeatures[0];
+    const kaishi = landFeatures[1];
+    const getStateNames = feature => {
+      const stateIds = new Set(
+        pack.cells.i
+          .filter(cellId => pack.cells.f[cellId] === feature.i && pack.cells.state[cellId])
+          .map(cellId => pack.cells.state[cellId])
+      );
+      return [...stateIds]
+        .map(stateId => pack.states[stateId])
+        .filter(state => state && !state.removed)
+        .map(state => state.name);
+    };
+
     geographicFeatures.forEach(feature => {
-      const name = feature.name.trim().replace(/^\(\)\s*/, "");
-      feature.name = `() ${name}`;
+      const fallbackName = feature.name.trim().replace(/^\(\)\s*/, "");
+      const stateNames = feature.type === "island" ? getStateNames(feature) : [];
+      feature.name =
+        feature.i === valeyn?.i
+          ? "Континент Валейн"
+          : feature.i === kaishi?.i
+            ? "Архипелаг Кайши"
+            : stateNames.length === 1
+              ? stateNames[0]
+              : `() ${fallbackName}`;
     });
 
     States.collectStatistics();
@@ -90,7 +113,11 @@ try {
       states: states.length,
       migratedStateLabels: removed,
       restoredMapLabels: pack.addedLabels.map(({ label }) => label.text),
-      geographicFeatures: geographicFeatures.map(({ name }) => name)
+      geographicFeatures: geographicFeatures.map(feature => ({
+        i: feature.i,
+        name: feature.name,
+        states: getStateNames(feature)
+      }))
     };
   });
 
@@ -100,10 +127,14 @@ try {
   await (await downloadPromise).saveAs(outputPath);
 
   await loadMap(outputPath);
-  const verification = await page.evaluate(() => {
+  const verification = await page.evaluate(expectedFeatures => {
     const normalize = (text = "") => text.replace(/\|/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase();
     const states = pack.states.filter(state => state.i && !state.removed);
     const stateNames = new Set(states.flatMap(state => [state.name, state.fullName].filter(Boolean).map(normalize)));
+    const incorrectlyNamedFeatures = expectedFeatures
+      .map(expected => ({ ...expected, savedName: pack.features[expected.i]?.name }))
+      .filter(feature => feature.savedName !== feature.name);
+
     return {
       states: states.length,
       activeStateLabels: options.map.labels.groups.filter(group => group.type === "state").every(group => group.active !== false),
@@ -111,18 +142,16 @@ try {
       wronglyMarkedMapLabels: pack.addedLabels
         .filter(({ label }) => label.text?.trim().startsWith("()"))
         .map(label => label.label.text),
-      unmarkedGeographicFeatures: pack.features
-        .filter(feature => feature?.name && !feature.name.trim().startsWith("()"))
-        .map(feature => feature.name)
+      incorrectlyNamedFeatures
     };
-  });
+  }, result.geographicFeatures);
 
   if (
     verification.states !== result.states ||
     !verification.activeStateLabels ||
     verification.duplicateStateLabels.length ||
     verification.wronglyMarkedMapLabels.length ||
-    verification.unmarkedGeographicFeatures.length
+    verification.incorrectlyNamedFeatures.length
   ) {
     throw new Error(`Проверка исправленной карты не пройдена: ${JSON.stringify(verification)}`);
   }

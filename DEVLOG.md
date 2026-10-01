@@ -29,7 +29,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - First editable Kontar draft: `worlds/kontar/kontar-first-rift-draft.map`.
 - Vector reference: `worlds/kontar/reference/kontar-first-rift.svg`.
 - Reproducible generator: `scripts/kontar-generate-map.mjs`.
-- Saved-map label repair: `scripts/kontar-repair-labels.mjs` migrates manual state-name labels and marks geographic feature names with `()`.
+- Saved-map label repair: `scripts/kontar-repair-labels.mjs` names Valeyn and Kaishi, names single-state islands after their state, and marks only unresolved feature names with `()`.
 - One-click launcher: `scripts/kontar-launch.cmd` starts the app, opens the current Kontar map on the first non-primary monitor, saves browser downloads to the real user Downloads folder, and stops its server when the browser closes.
 - Launcher log: `%LOCALAPPDATA%\Kontar\launcher.log`.
 - Heightmap edit mode is stored independently of its translated label, so Russian `Risk`, `Keep`, and `Erase` modes finalize correctly.
@@ -58,7 +58,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 - State-center paint regression — captured centers relocate, and states reduced to zero cells are safely removed
 - Shortcut / label regression — `Win+Shift+S` triggers no app command; one action refits every active state label
 - Legacy-label migration regression — duplicate manual state names are removed while non-state geographic labels are preserved
-- Saved-map label repair — verifies state labels are active, duplicates are removed, and geographic feature placeholders are marked
+- Saved-map label repair — verifies Valeyn, Kaishi, single-state islands, and unresolved geographic placeholders independently
 - Sole-capital removal regression — deleting the last burg clears state and province capital references
 
 ## Working rules
@@ -120,3 +120,4 @@ npm test -- --run
 - 2026-10-01 — made state-label refitting migrate legacy manual state-name labels and enable the real state-label group.
 - 2026-10-01 — added a verified saved-map migration for state labels and geographic-name placeholders.
 - 2026-10-01 — corrected geographic placeholders to feature names and allowed confirmed removal of a state's only burg.
+- 2026-10-01 — refined feature naming: Valeyn and Kaishi are canonical, while single-state islands inherit state names.
