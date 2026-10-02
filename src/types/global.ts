@@ -24,8 +24,8 @@ declare global {
   // Still defined in public/modules/ui/style.js
   var editStyle: (layer: string, group?: string) => void;
   var getColorScheme: (scheme: string | null) => (t: number) => string;
-  var getColor: (height: number, scheme: (t: number) => string) => string;
-  var heightmapColorSchemes: Record<string, unknown>;
+  var getColor: (height: number, scheme?: (t: number) => string) => string;
+  var heightmapColorSchemes: Record<string, (t: number) => string>;
   var addCustomColorScheme: (scheme: string) => void;
   var updateTextureSelectValue: (href: string) => void;
   var calculateFriendlyGridSize: () => void;

@@ -26,6 +26,13 @@ vi.mock("@/components/options/io-panes", () => ({
 vi.mock("@/components/options/view-mode", () => ({ changeViewMode: vi.fn() }));
 vi.mock("@/services/url-params", () => ({ copyMapURL: vi.fn() }));
 vi.mock("@/services/assistant", () => ({ toggleAssistant: vi.fn() }));
+vi.mock("@/services", () => ({ Services: {} }));
+vi.mock("@/services/interface-fonts", () => ({
+  INTERFACE_FONTS: ["default", "Segoe UI", "Arial", "Verdana", "Tahoma", "Trebuchet MS", "Georgia", "Calibri"],
+  applyInterfaceFont: vi.fn(async () => true),
+  listInterfaceFonts: vi.fn(async () => []),
+  importInterfaceFont: vi.fn()
+}));
 
 let tab: typeof import("./options-tab");
 const control = (key: string): HTMLInputElement => document.querySelector(`[data-option="${key}"]`)!;
@@ -72,6 +79,18 @@ afterAll(() => {
 });
 
 describe("options tab bindings", () => {
+  it("stores the interface font without modifying map options and restores the default", async () => {
+    const map = JSON.stringify(options.map);
+    edit(control("interfaceFont"), "Verdana", "change");
+    await Promise.resolve();
+    expect(options.app.ui.fontFamily).toBe("Verdana");
+    expect(JSON.stringify(options.map)).toBe(map);
+    expect(JSON.parse(localStorage.getItem("fmg-options")!).app.ui.fontFamily).toBe("Verdana");
+    document.getElementById("interfaceFontRestore")!.click();
+    await Promise.resolve();
+    expect(options.app.ui.fontFamily).toBe("default");
+    expect(control("interfaceFont").value).toBe("default");
+  });
   it("syncs replacement options and derived readouts after control IDs change", () => {
     options.generation.graph.density = 5;
     options.generation.burgs.limit = 123;
@@ -223,6 +242,7 @@ describe("options tab bindings", () => {
     edit(control("themeColor"), "#101820", "change");
     expect(document.documentElement.style.getPropertyValue("--text-light")).toBe("#ffffff");
     expect(document.documentElement.style.getPropertyValue("--text-header")).toBe("#ffffff");
+    expect(output("points").style.color).toBe("rgb(255, 255, 255)");
 
     options = Options.getDefaultOptions();
     Options.restore();
@@ -233,12 +253,61 @@ describe("options tab bindings", () => {
     edit(control("themeColor"), "#ffffff");
     expect(document.documentElement.style.getPropertyValue("--text-main")).toBe("#000000");
     expect(document.documentElement.style.getPropertyValue("--text-header")).toBe("#000000");
+    expect(output("points").style.color).toBe("rgb(5, 51, 5)");
   });
 
   it("still pairs unbound legacy controls by ID", () => {
     const input = document.getElementById("pngResolutionInput") as HTMLInputElement;
     edit(input, "3");
     expect((document.getElementById("pngResolutionOutput") as HTMLInputElement).value).toBe("3");
+  });
+
+  it("persists the independent window color and its text contrast", () => {
+    const themeColor = options.app.ui.themeColor;
+    edit(control("dialogColor"), "#18202c", "change");
+    expect(options.app.ui.themeColor).toBe(themeColor);
+    expect(options.app.ui.dialogColor).toBe("#18202c");
+    expect(document.documentElement.style.getPropertyValue("--bg-fields")).toBe("#18202c");
+    expect(document.documentElement.style.getPropertyValue("--text-dialogs")).toBe("#ffffff");
+    options = Options.getDefaultOptions();
+    Options.restore();
+    tab.syncOptionInputs();
+    expect(control("dialogColor").value).toBe("#18202c");
+    edit(control("dialogColor"), "#ffffff");
+    expect(document.documentElement.style.getPropertyValue("--text-dialogs")).toBe("#000000");
+  });
+
+  it("fills missing window color in old preferences without resetting the first color", () => {
+    localStorage.setItem("fmg-options", JSON.stringify({ app: { ui: { themeColor: "#283344" } } }));
+    Options.restore();
+    expect(options.app.ui.themeColor).toBe("#283344");
+    expect(options.app.ui.dialogColor).toBe("#fafafa");
+    expect(options.app.ui.controlColor).toBeNull();
+  });
+
+  it("persists a shared slider and scrollbar color independently of both backgrounds", () => {
+    edit(control("controlColor"), "#f09030", "change");
+    edit(control("themeColor"), "#142030");
+    edit(control("dialogColor"), "#fafafa");
+    expect(document.documentElement.style.getPropertyValue("--ui-accent")).toBe("#f09030");
+    expect(document.documentElement.style.getPropertyValue("--ui-dialog-accent")).toBe("#f09030");
+    options = Options.getDefaultOptions();
+    Options.restore();
+    tab.syncOptionInputs();
+    expect(options.app.ui.controlColor).toBe("#f09030");
+    expect(control("controlColor").value).toBe("#f09030");
+    document.getElementById("controlColorRestore")!.click();
+    expect(options.app.ui.controlColor).toBeNull();
+    expect(document.documentElement.style.getPropertyValue("--ui-dialog-accent")).not.toBe("#f09030");
+  });
+
+  it("picks distinct theme-derived accents for light and dark surfaces", () => {
+    edit(control("dialogColor"), "#ffffff");
+    const light = document.documentElement.style.getPropertyValue("--ui-dialog-accent");
+    edit(control("dialogColor"), "#101820");
+    const dark = document.documentElement.style.getPropertyValue("--ui-dialog-accent");
+    expect(light).not.toBe(dark);
+    expect(control("controlColor").value).toBe(dark);
   });
 
   it("reads lock values from the binding config", () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 (globalThis as Record<string, unknown>).ERROR = false;
 (globalThis as Record<string, unknown>).changeViewMode = () => {};
@@ -15,8 +15,18 @@ document.getElementById = (() =>
     classList: { add: () => {}, remove: () => {}, contains: () => false },
     style: {}
   }) as unknown as HTMLElement) as typeof document.getElementById;
-const { createAvailableLandCellFinder, getHeightmapEditMode, setHeightmapEditMode } = await import("./heightmap-editor");
+const { createAvailableLandCellFinder, getHeightmapEditMode, setHeightmapEditMode, getEditorHeightColor } =
+  await import("./heightmap-editor");
 document.getElementById = originalGetElementById;
+
+it("previews water with the ocean palette and distinguishes shallow water from trenches", () => {
+  vi.stubGlobal("styles", { heightmap: { oceanHeights: { options: { scheme: "ocean-test" } } } });
+  vi.stubGlobal("getColorScheme", (scheme: string) => (value: number) => `${scheme}:${value}`);
+  expect(getEditorHeightColor(19).startsWith("ocean-test:")).toBe(true);
+  expect(getEditorHeightColor(1)).not.toBe(getEditorHeightColor(19));
+  expect(getEditorHeightColor(30).startsWith("bright:")).toBe(true);
+  vi.unstubAllGlobals();
+});
 
 describe("heightmap edit mode", () => {
   it("keeps the internal mode when localization changes the visible label", () => {

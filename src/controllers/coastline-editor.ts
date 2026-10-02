@@ -1,4 +1,4 @@
-import { closeDialogs, destroyDialog } from "@/components/dialog/dialog-helpers";
+import { closeDialogs, destroyDialog, updateDialog } from "@/components/dialog/dialog-helpers";
 import { Controllers } from "@/controllers";
 import { Coastline, type CoastlineSettings, type FractalizedShape } from "@/generators/coastline-generator";
 import type { Feature } from "@/generators/features-generator";
@@ -207,6 +207,12 @@ function setFeature(feature: Feature | null): void {
       applyChange(preset);
     });
   }
+  // Localization can change the auto-sized width before the next frame.
+  requestAnimationFrame(() =>
+    updateDialog("coastlineSettingsDialog", {
+      position: { my: "right top", at: "right-10 top+10", of: "#map", collision: "fit" }
+    })
+  );
 }
 
 function applyChange(change: Partial<CoastlineSettings>): void {

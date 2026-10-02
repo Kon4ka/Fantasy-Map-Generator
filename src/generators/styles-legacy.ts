@@ -190,7 +190,7 @@ export function stylesFromMap(root: ParentNode = document): Styles {
   for (const [selector, attrs] of Object.entries(harvestAttributes())) {
     const route = PRESET_ROUTES[selector];
     const nullable = route.ownAttrs === false ? [] : nullableAttrsAt(route.path);
-    const el = root.querySelector(selector);
+    const el = root.querySelector(selector === "#terrs > #oceanHeights" ? "#oceanHeights" : selector);
 
     if (!el) {
       // a map predating the child groups styles the layer group itself; leaving the child at its
@@ -380,6 +380,7 @@ export function styleNodeFor(element: string, group: string): { node: object; la
 }
 
 function routeFor(selector: string): PresetRoute | undefined {
+  if (selector === "#oceanHeights") return PRESET_ROUTES["#terrs > #oceanHeights"];
   if (selector in PRESET_ROUTES) return PRESET_ROUTES[selector];
   const label = selector.match(/^#labels > #(.+)$/);
   if (label) return { path: ["labels", "groups", label[1]], kind: "label" };

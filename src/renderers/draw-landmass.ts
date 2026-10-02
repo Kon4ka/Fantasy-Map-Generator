@@ -12,7 +12,8 @@ export function drawLandmass(layer: Layer): void {
 
   const paths: string[] = [];
   const landMask: string[] = [];
-  const waterMask: string[] = ['<rect x="0" y="0" width="100%" height="100%" fill="white" />'];
+  const { width, height } = options.map.graph;
+  const waterMask: string[] = [`<rect x="0" y="0" width="${width}" height="${height}" fill="white" />`];
 
   for (const feature of pack.features) {
     if (!feature || feature.type === "ocean") continue;
@@ -31,7 +32,13 @@ export function drawLandmass(layer: Layer): void {
 
   ensureEl("featurePaths").innerHTML = paths.join("");
   ensureEl("land").innerHTML = landMask.join("");
-  ensureEl("water").innerHTML = waterMask.join("");
+  const water = ensureEl("water");
+  water.innerHTML = waterMask.join("");
+  water.setAttribute("maskUnits", "userSpaceOnUse");
+  water.setAttribute("x", "0");
+  water.setAttribute("y", "0");
+  water.setAttribute("width", String(width));
+  water.setAttribute("height", String(height));
 
   layer.getEl().innerHTML = /* html */ `<rect x="0" y="0" width="${options.map.graph.width}" height="${options.map.graph.height}" />`;
 

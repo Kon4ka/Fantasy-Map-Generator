@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
+import { createMapFileStore } from "./kontar-file-store.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const appUrl = "http://127.0.0.1:5173/Fantasy-Map-Generator/";
@@ -186,6 +187,27 @@ try {
     const page = context.pages()[0] ?? (await context.newPage());
     const downloadsDirectory = getDownloadsDirectory();
     fs.mkdirSync(downloadsDirectory, { recursive: true });
+    if (!testRun) {
+      const files = createMapFileStore(downloadsDirectory, [
+        path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds", "kontar")
+      ]);
+      await page.exposeBinding("kontarFileOperation", ({ frame }, action, ...args) => {
+        if (frame !== page.mainFrame() || new URL(frame.url()).origin !== new URL(appUrl).origin) {
+          throw new Error("File access is limited to the map editor");
+        }
+        if (action === "associate") return files.associate(...args);
+        if (action === "save") return files.save(...args);
+        if (action === "saveAs") return files.saveAs(...args);
+        throw new Error("Unknown file operation");
+      });
+      await page.addInitScript(() => {
+        window.kontarFiles = {
+          associate: (name, digest) => window.kontarFileOperation("associate", name, digest),
+          save: (id, data) => window.kontarFileOperation("save", id, data),
+          saveAs: (name, data) => window.kontarFileOperation("saveAs", name, data)
+        };
+      });
+    }
     const pendingDownloads = new Set();
     const saveDownload = async download => {
       const downloadPath = getAvailableDownloadPath(downloadsDirectory, download.suggestedFilename());
@@ -222,12 +244,21 @@ try {
         picker.dispatchEvent(new Event("input", { bubbles: true }));
         picker.dispatchEvent(new Event("change", { bubbles: true }));
         Options.persist();
-        if (getComputedStyle(document.getElementById("options")).color !== "rgb(255, 255, 255)") {
-          throw new Error("Текст тёмной панели не стал белым");
-        }
       });
+      await page.waitForFunction(() =>
+        Array.from(document.querySelectorAll(
+          "#options, #optionsContent p, #optionsContent span, #options .tab button, #configureWorld, #optionsReset, #pointsOutputFormatted"
+        )).every(element => getComputedStyle(element).color === "rgb(255, 255, 255)")
+      );
       const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
-      await page.evaluate(() => window.Services.Save.toMachine());
+      await page.evaluate(async () => {
+        const data = await window.Services.Save.prepareMapData();
+        const url = URL.createObjectURL(new Blob([data]));
+        const anchor = document.createElement("a");
+        anchor.download = "launcher-selftest.map";
+        anchor.href = url;
+        anchor.click();
+      });
       const testDownloadPath = await saveDownload(await downloadPromise);
       if (!fs.existsSync(testDownloadPath)) throw new Error("Самопроверка не обнаружила сохранённый файл карты");
       fs.unlinkSync(testDownloadPath);

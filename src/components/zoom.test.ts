@@ -10,7 +10,7 @@ import "@/generators/styles";
 import { setViewportSize, setViewportTransform, viewport } from "@/components/viewport";
 import { ViewportLayers } from "@/renderers/viewport/viewport-renderer";
 import { rn } from "@/utils/numberUtils";
-import { applyZoomBehavior, setMapZoom, setTranslateExtent, setZoomExtent, zoomTo } from "./zoom";
+import { applyZoomBehavior, setMapBrushActive, setMapZoom, setTranslateExtent, setZoomExtent, zoomTo } from "./zoom";
 
 beforeEach(() => {
   document.body.innerHTML = /* html */ `
@@ -46,6 +46,41 @@ beforeEach(() => {
   vi.mocked(ViewportLayers.schedule).mockClear();
   vi.mocked(ViewportLayers.renderNow).mockClear();
   applyZoomBehavior();
+  setMapBrushActive(false);
+});
+
+describe("brush gesture ownership", () => {
+  const pan = (button: number): void => {
+    const map = document.getElementById("map")!;
+    const eventView = document.defaultView!;
+    const mouseEvent = (type: string, clientX: number, clientY: number): MouseEvent => {
+      const event = new eventView.MouseEvent(type, { button, clientX, clientY, bubbles: true });
+      Object.defineProperty(event, "view", { value: eventView });
+      return event;
+    };
+    map.dispatchEvent(mouseEvent("mousedown", 100, 100));
+    eventView.dispatchEvent(mouseEvent("mousemove", 150, 120));
+    eventView.dispatchEvent(mouseEvent("mouseup", 150, 120));
+  };
+
+  it("reserves LMB for the brush, but lets MMB pan", () => {
+    setTranslateExtent(-1000, -1000, 2000, 2000);
+    setMapBrushActive(true);
+    pan(0);
+    expect(viewport).toMatchObject({ x: 0, y: 0 });
+    pan(1);
+    expect(viewport).toMatchObject({ x: 50, y: 20 });
+  });
+
+  it("restores normal LMB panning when the brush is off and ignores RMB", () => {
+    setTranslateExtent(-1000, -1000, 2000, 2000);
+    setMapBrushActive(true);
+    setMapBrushActive(false);
+    pan(2);
+    expect(viewport).toMatchObject({ x: 0, y: 0 });
+    pan(0);
+    expect(viewport).toMatchObject({ x: 50, y: 20 });
+  });
 });
 
 describe("programmatic zoom", () => {

@@ -5,10 +5,12 @@ const mocks = vi.hoisted(() => ({
   draw: vi.fn(),
   refresh: vi.fn(),
   regenerate: vi.fn(),
+  regenerateDepths: vi.fn(),
   dialog: vi.fn(),
   applyPreset: vi.fn()
 }));
-vi.mock("@/components/layers", () => ({ Layers: { draw: mocks.draw, toggle: vi.fn() } }));
+vi.mock("@/components/layers", () => ({ Layers: { draw: mocks.draw, toggle: vi.fn(), isOn: () => true } }));
+vi.mock("@/generators/ocean-depths-generator", () => ({ regenerateOceanDepths: mocks.regenerateDepths }));
 vi.mock("@/components/dialog/dialog-helpers", () => ({ refreshEditors: mocks.refresh }));
 vi.mock("@/components/options/tabs/layers-tab", () => ({
   LAYER_TOGGLES: new Map(),
@@ -34,6 +36,9 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   vi.stubGlobal("Rivers", { regenerate: mocks.regenerate });
+  vi.stubGlobal("customization", 0);
+  vi.stubGlobal("grid", {});
+  vi.stubGlobal("pack", {});
   vi.stubGlobal("$", () => ({ dialog: mocks.dialog }));
 });
 
@@ -42,6 +47,21 @@ function confirmation() {
 }
 
 describe("shared regeneration commands", () => {
+  it("confirms sea-floor replacement and redraws only ocean depths", () => {
+    MAP_COMMANDS.find(command => command.id === "regenerateOceanDepths")!.run();
+    expect(mocks.regenerateDepths).not.toHaveBeenCalled();
+    confirmation().buttons.Proceed.call(document.getElementById("alert"));
+    expect(mocks.regenerateDepths).toHaveBeenCalledOnce();
+    expect(mocks.draw).toHaveBeenCalledWith("oceanDepths");
+    expect(mocks.draw).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel leaves manual sea-floor edits alone", () => {
+    MAP_COMMANDS.find(command => command.id === "regenerateOceanDepths")!.run();
+    confirmation().buttons.Cancel.call(document.getElementById("alert"));
+    expect(mocks.regenerateDepths).not.toHaveBeenCalled();
+    expect(mocks.draw).not.toHaveBeenCalled();
+  });
   it("waits for confirmation before changing the map and refreshing its views", () => {
     MAP_COMMANDS.find(command => command.id === "regenerateRivers")!.run();
     expect(mocks.regenerate).not.toHaveBeenCalled();

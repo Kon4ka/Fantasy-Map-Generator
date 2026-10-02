@@ -9,11 +9,21 @@ import { getLayerByShortcut } from "./options/tabs/layers-tab";
 import { changeMapZoom, panMap, setMapZoom } from "./zoom";
 
 // Hotkeys, see github.com/Azgaar/Fantasy-Map-Generator/wiki/Hotkeys
+const plainLayerKeydowns = new Set<string>();
+const ignoredKeyups = new Set<string>();
 document.addEventListener("keydown", handleKeydown);
 document.addEventListener("keyup", handleKeyup);
+window.addEventListener("blur", () => plainLayerKeydowns.clear());
 
 function handleKeydown(event: KeyboardEvent): void {
+  ignoredKeyups.delete(event.code);
+  plainLayerKeydowns.delete(event.code);
+  if (event.metaKey && event.shiftKey && event.code === "KeyS") {
+    ignoredKeyups.add(event.code);
+    return;
+  }
   if (!allowHotkeys()) return; // in some cases (e.g. in a textarea) hotkeys are not allowed
+  if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) plainLayerKeydowns.add(event.code);
 
   const { code, ctrlKey, altKey, shiftKey } = event;
   if (altKey && !ctrlKey && !shiftKey) event.preventDefault(); // disallow plain alt key combinations
@@ -22,6 +32,8 @@ function handleKeydown(event: KeyboardEvent): void {
 }
 
 function handleKeyup(event: KeyboardEvent): void {
+  const plainLayerKey = plainLayerKeydowns.delete(event.code);
+  if (ignoredKeyups.delete(event.code) || (event.metaKey && event.shiftKey && event.code === "KeyS")) return;
   if (!allowHotkeys()) return; // in some cases (e.g. in a textarea) hotkeys are not allowed
 
   event.stopPropagation();
@@ -47,6 +59,7 @@ function handleKeyup(event: KeyboardEvent): void {
   else if (code === "KeyO" && findEl("canvas3d")) Controllers.View3d.toggleOptions();
   else if (ctrlOnly && code === "KeyQ") toggleSaveReminder();
   else if (ctrlOnly && code === "KeyS") Services.Save.toMachine();
+  else if (ctrl && shiftKey && !altKey && code === "KeyS") Services.Save.toMachineAs();
   else if (ctrlOnly && code === "KeyC") Services.Save.toDropbox();
   else if (ctrlOnly && code === "KeyZ") findEl("undo")?.click();
   else if (ctrlOnly && code === "KeyY") findEl("redo")?.click();
@@ -82,7 +95,8 @@ function handleKeyup(event: KeyboardEvent): void {
   else if (key === "%") Controllers.RouteCreator.open();
   else if (code === "BracketRight") handleBracketSizeChange(code);
   else if (code === "BracketLeft" && handleBracketSizeChange(code)) return;
-  else if (layer && !(code === "Equal" && (customization || brush))) Layers.toggle(layer);
+  else if (layer && plainLayerKey && !ctrl && !shiftKey && !altKey && !(code === "Equal" && (customization || brush)))
+    Layers.toggle(layer);
   else if (code === "ArrowLeft") panMap(10, 0);
   else if (code === "ArrowRight") panMap(-10, 0);
   else if (code === "ArrowUp") panMap(0, 10);
@@ -114,7 +128,7 @@ function allowHotkeys(): boolean {
   const activeElement = document.activeElement as HTMLElement | null;
   const tagName = activeElement?.tagName;
   const contentEditable = activeElement?.contentEditable;
-  if (["INPUT", "SELECT", "TEXTAREA"].includes(tagName ?? "")) return false;
+  if (activeElement?.closest("input,select,textarea")) return false;
   if (tagName === "DIV" && contentEditable === "true") return false;
   if (document.getSelection()?.toString()) return false;
   return true;

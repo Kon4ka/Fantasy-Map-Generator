@@ -196,6 +196,9 @@ export const optionsSchema = z.strictObject({
       size: positive.nullable(), // null until the user picks one: the interface follows the extent
       tooltipSize: positive,
       themeColor: hexColor,
+      dialogColor: hexColor,
+      controlColor: hexColor.nullable(),
+      fontFamily: z.string().min(1),
       transparency: percent,
       assistant: z.enum(["show", "hide"]),
       speakerVoice: z.string() // the index into the browser's voice list, "" until one is picked

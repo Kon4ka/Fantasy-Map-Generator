@@ -4,6 +4,7 @@ import { closeDialogs } from "@/components/dialog/dialog-helpers";
 import { Layers } from "@/components/layers";
 import { tip } from "@/components/tooltips";
 import { Services } from "@/services";
+import { pickWritableMap } from "@/services/io/map-file";
 import { createFileInput } from "@/utils/fileUtils";
 import { ensureEl, findEl } from "@/utils/nodeUtils";
 import { rn } from "@/utils/numberUtils";
@@ -214,6 +215,14 @@ mapInput.onchange = () => {
 
 /** Ask for a map file; the input and its single listener live for the page */
 export function pickMapFile(): void {
+  if (window.showOpenFilePicker) {
+    void pickWritableMap()
+      .then(file => {
+        if (file) void Services.Load.uploadMap(file);
+      })
+      .catch(error => tip(String(error), true, "error"));
+    return;
+  }
   mapInput.click();
 }
 

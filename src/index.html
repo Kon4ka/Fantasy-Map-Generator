@@ -133,7 +133,7 @@
     </style>
     <link
       rel="preload"
-      href="index.css?v=bbeba9a9"
+      href="index.css?v=55209296"
       as="style"
       onload="
         this.onload = null;
@@ -397,14 +397,41 @@
         <div id="toolsContent" class="tabcontent"></div>
         <div id="customizationMenu" class="tabcontent"></div>
         <div id="aboutContent" class="tabcontent"></div>
-        <div id="sticked">
-          <button id="newMapButton" data-tip="Generate a new map based on options" data-shortcut="F2">New Map</button>
-          <button id="exportButton" data-tip="Select format to download image or export map data">Export</button>
-          <button id="saveButton" data-tip="Save fully-functional map file">Save</button>
-          <button id="loadButton" data-tip="Load fully-functional map (.map or .gz formats)">Load</button>
-          <button id="zoomReset" data-tip="Reset map zoom" data-shortcut="0 (zero)">Zoom out</button>
-          <button id="searchButton" data-tip="Search map and commands" data-shortcut="Space">Search</button>
+      </div>
+    </div>
+    <div id="fileToolbar">
+      <button id="fileToolbarToggle" type="button" aria-label="File menu" title="File menu"
+        aria-expanded="false" aria-controls="sticked" data-tip="Open file actions">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v13H3z M3 11h18"/></svg>
+      </button>
+      <div id="sticked" role="group" aria-label="File actions" inert>
+        <div class="file-toolbar-actions">
+        <button id="newMapButton" type="button" aria-label="New Map" title="New Map" data-tip="Generate a new map based on options" data-shortcut="F2">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H5v18h14V8z M14 3v5h5 M8 14h8 M12 10v8"/></svg>
+        </button>
+        <button id="saveButton" type="button" aria-label="Save" title="Save" data-tip="Update the current map file" data-shortcut="Ctrl + S">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2z M7 3v6h10V3 M7 21v-8h10v8"/></svg>
+        </button>
+        <button id="saveAsButton" type="button" aria-label="Save as…" title="Save as…" data-tip="Create a copy with a different file name" data-shortcut="Ctrl + Shift + S">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H5v18h14V8z M14 3v5h5 M8 14h8 M8 17h5"/><path d="M20 13v7 M17 16h6"/></svg>
+        </button>
+        <button id="loadButton" type="button" aria-label="Load" title="Load" data-tip="Load fully-functional map (.map or .gz formats)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v13H3z M3 11h18"/></svg>
+        </button>
+        <button id="exportButton" type="button" aria-label="Export" title="Export" data-tip="Select format to download image or export map data">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5"/></svg>
+        </button>
+        <button id="saveMoreButton" type="button" aria-label="Other save locations" title="Other save locations" data-tip="Save to browser storage or Dropbox">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15a4 4 0 0 1-1-8 7 7 0 0 1 13-1 5 5 0 0 1 0 10 M12 12v9 M8 17l4 4 4-4"/></svg>
+        </button>
+        <button id="zoomReset" type="button" aria-label="Zoom out" title="Zoom out" data-tip="Reset map zoom" data-shortcut="0 (zero)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21 M7 10h6"/></svg>
+        </button>
+        <button id="searchButton" type="button" aria-label="Search" title="Search" data-tip="Search map and commands" data-shortcut="Space">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21"/></svg>
+        </button>
         </div>
+        <div id="currentMapFile" translate="no"></div>
       </div>
     </div>
     <div id="exitCustomization">
@@ -958,6 +985,12 @@
           <symbol id="relief-mount-1" viewBox="0 0 100 100">
             <path d="m3,69 16,-12 31,-32 15,20 30,24" fill="#fff" stroke="#5c5c70" stroke-width="1" />
             <path d="m3,69 16,-12 31,-32 -14,44" fill="#999999" />
+            <path d="m3,71 h92 m-83,3 h83" stroke="#5c5c70" stroke-dasharray="7, 11" stroke-width="1" />
+          </symbol>
+          <symbol id="relief-mountSnow-0" viewBox="0 0 100 100">
+            <path d="m3,69 16,-12 31,-32 15,20 30,24" fill="#fff" stroke="#5c5c70" stroke-width="1" />
+            <path d="m3,69 16,-12 31,-32 -14,44" fill="#999999" />
+            <path d="M50,25 37,38.4 40,37 43,42 46,37 48,39Z" fill="#fff" />
             <path d="m3,71 h92 m-83,3 h83" stroke="#5c5c70" stroke-dasharray="7, 11" stroke-width="1" />
           </symbol>
           <symbol id="relief-hill-1" viewBox="0 0 100 100">
@@ -3610,7 +3643,7 @@
     <script defer src="libs/polylabel.min.js?v1.105.0"></script>
     <script defer src="libs/simplify.js?v1.105.6"></script>
     <script defer src="modules/ui/style-presets.js?v=e75aff2b"></script>
-    <script defer src="modules/ui/style.js?v=87175afb"></script>
+    <script defer src="modules/ui/style.js?v=c8b73b32"></script>
     <script defer src="libs/rgbquant.min.js"></script>
     <script defer src="libs/jquery.ui.touch-punch.min.js"></script>
   </body>

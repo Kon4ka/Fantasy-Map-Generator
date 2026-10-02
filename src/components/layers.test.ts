@@ -1,9 +1,69 @@
 // @vitest-environment jsdom
 // The registry is tested against fake layers: ordering, activation and restore are guaranteed without a real map.
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Layer, LayersRegistry, type LayersState, Layers as MapLayers } from "./layers";
+import "@/generators/styles";
+import { Layer, LayersRegistry, type LayersState, Layers as MapLayers, restoreMapLayers } from "./layers";
 
 let Layers: LayersRegistry;
+
+it("legacy maps split depths while newly saved maps keep an explicit depth toggle", () => {
+  const restore = vi.spyOn(MapLayers, "restore").mockImplementation(() => {});
+  const render = styles.heightmap.oceanHeights.options.render;
+  try {
+    styles.heightmap.oceanHeights.options.render = true;
+    const old = { order: ["heightmap", "lakes"], active: ["heightmap"] };
+    restoreMapLayers(old);
+    expect(restore).toHaveBeenLastCalledWith({ order: old.order, active: ["heightmap", "oceanDepths"] });
+    expect(old.active).toEqual(["heightmap"]);
+    const saved = { order: ["oceanDepths", "heightmap"], active: ["heightmap"] };
+    restoreMapLayers(saved);
+    expect(restore).toHaveBeenLastCalledWith(saved);
+    styles.heightmap.oceanHeights.options.render = false;
+    restoreMapLayers(old);
+    expect(restore).toHaveBeenLastCalledWith(old);
+  } finally {
+    restore.mockRestore();
+    styles.heightmap.oceanHeights.options.render = render;
+  }
+});
+
+it("adopts old nested ocean heights without duplicates or losing content", () => {
+  document.getElementById("viewbox")!.innerHTML =
+    '<g id="terrs"><g id="oceanHeights"><path id="depth-kept"/></g><g id="landHeights"/></g>';
+  const registry = new LayersRegistry([
+    new Layer({ id: "oceanDepths", element: "oceanHeights", parent: "viewbox" }),
+    new Layer({ id: "heightmap", element: "terrs", parent: "viewbox", children: [{ id: "landHeights", tag: "g" }] })
+  ]);
+  registry.restore({ order: ["heightmap"], active: ["oceanDepths"] });
+  expect(document.querySelectorAll("#oceanHeights")).toHaveLength(1);
+  expect(document.getElementById("oceanHeights")!.parentElement!.id).toBe("viewbox");
+  expect(document.getElementById("depth-kept")).not.toBeNull();
+  expect(displayOf("terrs")).toBe("none");
+  expect(displayOf("oceanHeights")).not.toBe("none");
+});
+
+it("new maps place ice below relief", () => {
+  const order = MapLayers.state.order;
+  expect(order.indexOf("ice")).toBeLessThan(order.indexOf("relief"));
+});
+
+it("loaded maps upgrade ice ordering without changing other layers, active flags or the source state", () => {
+  const restore = vi.spyOn(MapLayers, "restore").mockImplementation(() => {});
+  try {
+    const state = { order: ["rivers", "relief", "states", "ice", "labels"], active: ["ice", "relief"] };
+    restoreMapLayers(state);
+    expect(restore).toHaveBeenLastCalledWith({
+      order: ["rivers", "ice", "relief", "states", "labels"],
+      active: state.active
+    });
+    expect(state.order).toEqual(["rivers", "relief", "states", "ice", "labels"]);
+    const custom = { order: ["ice", "states", "relief"], active: ["relief"] };
+    restoreMapLayers(custom);
+    expect(restore).toHaveBeenLastCalledWith(custom);
+  } finally {
+    restore.mockRestore();
+  }
+});
 
 beforeEach(() => {
   document.body.innerHTML = /* html */ `<svg id="map"><g id="viewbox"></g></svg>`;

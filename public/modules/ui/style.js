@@ -37,41 +37,6 @@ function editStyle(element, group) {
   }, 1500);
 }
 
-// Color schemes
-const heightmapColorSchemes = {
-  bright: d3.scaleSequential(d3.interpolateSpectral),
-  light: d3.scaleSequential(d3.interpolateRdYlGn),
-  natural: d3.scaleSequential(d3.interpolateRgbBasis(["white", "#EEEECC", "tan", "green", "teal"])),
-  green: d3.scaleSequential(d3.interpolateGreens),
-  olive: d3.scaleSequential(d3.interpolateRgbBasis(["#ffffff", "#cea48d", "#d5b085", "#0c2c19", "#151320"])),
-  livid: d3.scaleSequential(d3.interpolateRgbBasis(["#BBBBDD", "#2A3440", "#17343B", "#0A1E24"])),
-  monochrome: d3.scaleSequential(d3.interpolateGreys)
-};
-
-// add default color schemes to the list of options
-ensureEl("styleHeightmapScheme").innerHTML = Object.keys(heightmapColorSchemes)
-  .map(scheme => `<option value="${scheme}">${scheme}</option>`)
-  .join("");
-
-function addCustomColorScheme(scheme) {
-  const stops = scheme.split(",");
-  heightmapColorSchemes[scheme] = d3.scaleSequential(d3.interpolateRgbBasis(stops));
-  ensureEl("styleHeightmapScheme").options.add(new Option(scheme, scheme, false, true));
-}
-
-function getColorScheme(scheme) {
-  if (!scheme) scheme = "bright";
-  if (!(scheme in heightmapColorSchemes)) {
-    const colors = scheme.split(",");
-    heightmapColorSchemes[scheme] = d3.scaleSequential(d3.interpolateRgbBasis(colors));
-  }
-
-  return heightmapColorSchemes[scheme];
-}
-
-function getColor(value, scheme = getColorScheme("bright")) {
-  return scheme(1 - (value < 20 ? value - 5 : value) / 100);
-}
 
 // Toggle style sections on element select
 styleElementSelect.addEventListener("change", selectStyleElement);
@@ -218,11 +183,12 @@ function selectStyleElement() {
     updateTextureSelectValue(opts.href);
   }
 
-  if (styleElement === "terrs") {
+  if (styleElement === "terrs" || styleElement === "oceanHeights") {
+    ensureEl("styleOceanDepthsRegenerate").style.display = styleElement === "oceanHeights" ? "table-row" : "none";
     styleHeightmap.style.display = "block";
-    styleHeightmapRenderOceanOption.style.display = styleGroupSelect.value === "oceanHeights" ? "block" : "none";
+    styleHeightmapRenderOceanOption.style.display = "none";
     styleHeightmapRenderOcean.checked = opts.render;
-    styleHeightmapScheme.value = opts.scheme;
+    window.syncHeightmapSchemeSelect(opts.scheme);
     styleHeightmapTerracing.value = opts.terracing;
     styleHeightmapSkip.value = opts.skip;
     styleHeightmapSimplification.value = opts.relax;
@@ -849,7 +815,7 @@ const heightsOptions = () => styles.heightmap[styleGroupSelect.value].options;
 
 function updateContourControls() {
   const opts = heightsOptions();
-  const oceanBlocked = styleGroupSelect.value === "oceanHeights" && !opts.render;
+  const oceanBlocked = false; // depth visibility is owned by the Layers tab
   const contoursSelect = ensureEl("styleHeightmapContours");
   contoursSelect.disabled = oceanBlocked;
   contoursSelect.title = oceanBlocked ? "Enable Render ocean heights to show ocean contours" : "";
@@ -871,7 +837,7 @@ function updateContourControls() {
 ensureEl("styleHeightmapHachures").addEventListener("change", e => {
   heightsOptions().hachures.mode = e.target.value;
   updateContourControls();
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 for (const [id, key] of [
@@ -891,14 +857,14 @@ for (const [id, key] of [
       control.value = value;
     }
     heightsOptions().hachures[key] = value;
-    Layers.draw("heightmap");
+    Layers.draw("heightmap", "oceanDepths");
   });
 }
 
 ensureEl("styleHeightmapContours").addEventListener("change", e => {
   heightsOptions().contours.mode = e.target.value;
   updateContourControls();
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 for (const [id, key] of [
@@ -918,158 +884,41 @@ for (const [id, key] of [
       control.value = value;
     }
     heightsOptions().contours[key] = value;
-    Layers.draw("heightmap");
+    Layers.draw("heightmap", "oceanDepths");
   });
 }
 
 styleHeightmapScheme.addEventListener("change", function () {
   heightsOptions().scheme = this.value;
-  Layers.draw("heightmap");
+  window.syncHeightmapSchemeSelect(this.value);
+  Layers.draw("heightmap", "oceanDepths");
 });
 
-openCreateHeightmapSchemeButton.addEventListener("click", function () {
-  // start with current scheme
-  const scheme = heightsOptions().scheme;
-  this.dataset.stops = scheme.startsWith("#")
-    ? scheme
-    : (() => [0, 0.25, 0.5, 0.75, 1].map(heightmapColorSchemes[scheme]).map(toHEX).join(","))();
-
-  // render dialog base structure
-  alertMessage.innerHTML = /* html */ `<div>
-    <i>Define heightmap gradient colors from high to low altitude</i>
-    <img id="heightmapSchemePreview" alt="heightmap preview" style="margin-top: 0.5em; width: 100%;" />
-    <div id="heightmapSchemeStops" style="margin-block: 0.5em; display: flex; flex-wrap: wrap;"></div>
-    <div id="heightmapSchemeGradient" style="height: 1.9em; border: 1px solid #767676;"></div>
-  </div>`;
-
-  renderPreview();
-  renderStops();
-  renderGradient();
-
-  function renderPreview() {
-    const stops = openCreateHeightmapSchemeButton.dataset.stops.split(",");
-    const scheme = d3.scaleSequential(d3.interpolateRgbBasis(stops));
-
-    const preview = drawHeights({
-      heights: grid.cells.h,
-      width: grid.cellsX,
-      height: grid.cellsY,
-      scheme,
-      renderOcean: false
-    });
-
-    ensureEl("heightmapSchemePreview").src = preview;
-  }
-
-  function renderStops() {
-    const stops = openCreateHeightmapSchemeButton.dataset.stops.split(",");
-
-    const colorInput = color =>
-      `<input type="color" class="stop" value="${color}" data-tip="Click to set the color" style="width: 2.5em; border: none;" />`;
-    const removeStopButton = index =>
-      `<button class="remove" data-index="${index}" data-tip="Remove color stop" style="margin-top: 0.3em; height: max-content;">x</button>`;
-    const addStopButton = () =>
-      `<button class="add" data-tip="Add color stop in between" style="margin-top: 0.3em; height: max-content;">+</button>`;
-
-    const container = ensureEl("heightmapSchemeStops");
-    container.innerHTML = stops
-      .map(
-        (stop, index) => `${colorInput(stop)}
-        ${index && index < stops.length - 1 ? removeStopButton(index) : ""}`
-      )
-      .join(addStopButton());
-
-    Array.from(container.querySelectorAll("input.stop")).forEach(
-      (input, index) =>
-        (input.oninput = function () {
-          stops[index] = this.value;
-          openCreateHeightmapSchemeButton.dataset.stops = stops.join(",");
-          renderPreview();
-          renderGradient();
-        })
-    );
-
-    Array.from(container.querySelectorAll("button.remove")).forEach(
-      button =>
-        (button.onclick = function () {
-          const index = +this.dataset.index;
-          stops.splice(index, 1);
-          openCreateHeightmapSchemeButton.dataset.stops = stops.join(",");
-          renderPreview();
-          renderStops();
-          renderGradient();
-        })
-    );
-
-    Array.from(container.querySelectorAll("button.add")).forEach(
-      (button, index) =>
-        (button.onclick = function () {
-          const middleColor = d3.interpolateRgb(stops[index], stops[index + 1])(0.5);
-          stops.splice(index + 1, 0, toHEX(middleColor));
-          openCreateHeightmapSchemeButton.dataset.stops = stops.join(",");
-          renderPreview();
-          renderStops();
-          renderGradient();
-        })
-    );
-  }
-
-  function renderGradient() {
-    const stops = openCreateHeightmapSchemeButton.dataset.stops;
-    ensureEl("heightmapSchemeGradient").style.background = `linear-gradient(to right, ${stops})`;
-  }
-
-  function handleCreate() {
-    const stops = openCreateHeightmapSchemeButton.dataset.stops;
-    if (stops in heightmapColorSchemes) return tip("This scheme already exists", false, "error");
-
-    addCustomColorScheme(stops);
-    heightsOptions().scheme = stops;
-    Layers.draw("heightmap");
-
-    handleClose();
-  }
-
-  function handleClose() {
-    $("#alert").dialog("close");
-  }
-
-  $("#alert").dialog({
-    resizable: false,
-    title: "Create heightmap color scheme",
-    width: "28em",
-    buttons: {
-      Create: handleCreate,
-      Cancel: handleClose
-    },
-    position: { my: "center top+150", at: "center top", of: "svg" }
-  });
-});
 
 styleHeightmapRenderOcean.addEventListener("change", e => {
   heightsOptions().render = e.target.checked;
   updateContourControls();
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 styleHeightmapTerracing.addEventListener("input", e => {
   heightsOptions().terracing = +e.target.value || 0;
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 styleHeightmapSkip.addEventListener("input", e => {
   heightsOptions().skip = +e.target.value || 0;
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 styleHeightmapSimplification.addEventListener("input", e => {
   heightsOptions().relax = +e.target.value || 0;
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 styleHeightmapCurve.addEventListener("change", e => {
   heightsOptions().curve = e.target.value;
-  Layers.draw("heightmap");
+  Layers.draw("heightmap", "oceanDepths");
 });
 
 styleReliefSet.addEventListener("change", e => {

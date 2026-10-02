@@ -17,6 +17,7 @@ import { getPointsNumber } from "@/data/graph-density";
 import { GenerationPipeline } from "@/generators/generation-pipeline";
 import { initiateAutosave } from "@/services/autosave";
 import { stashCallbackToken } from "@/services/help/auth";
+import { MapFiles } from "@/services/io/map-file";
 import { logStats } from "@/services/logging";
 import { registerServiceWorker } from "@/services/platform";
 import { checkLoadParameters } from "@/services/url-params";
@@ -158,6 +159,7 @@ const MAP_HISTORY_LIMIT = 100;
 
 /** Take note of a map that is now on screen, and announce it */
 export function registerMap(created: number = Date.now()): void {
+  MapFiles.clear();
   mapHistory.push({
     seed: options.map.seed,
     width: options.map.graph.width,

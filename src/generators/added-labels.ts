@@ -10,6 +10,7 @@ export interface AddedLabel {
   x: number;
   y: number;
   label: Label;
+  featureId?: number; // geographic labels keep their association across refits
   note?: string;
 }
 

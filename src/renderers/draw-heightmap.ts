@@ -22,6 +22,7 @@ import {
   range,
   select
 } from "d3";
+import { getColorScheme, heightColorPosition } from "@/utils/heightmap-colors";
 import { tip } from "../components/tooltips";
 import { round } from "../utils";
 import { getHeightContours, smoothContourHeights } from "./heightmap-contours";
@@ -61,17 +62,21 @@ function getContourSurface(smoothed: Float64Array): { points: [number, number][]
   return { points, elevations };
 }
 
-export const drawHeightmap = (): void => {
+export const drawHeightmap = (): void => drawElevation("land");
+export const drawOceanDepths = (): void => drawElevation("ocean");
+
+function drawElevation(band: "land" | "ocean"): void {
   if (customization === 1)
     return void tip("The Layer control is not available in the heightmap edit mode", false, "error");
 
   TIME && console.time("drawHeightmap");
 
-  const ocean = select("#terrs").select<SVGGElement>("#oceanHeights");
+  const ocean = select<SVGGElement, unknown>("#oceanHeights");
+  ocean.attr("mask", "url(#water)");
   const land = select("#terrs").select<SVGGElement>("#landHeights");
 
-  ocean.selectAll("*").remove();
-  land.selectAll("*").remove();
+  const drawLand = band === "land";
+  (drawLand ? land : ocean).selectAll("*").remove();
 
   const paths: (string | undefined)[] = new Array(101);
   const { cells, vertices } = grid;
@@ -81,11 +86,11 @@ export const drawHeightmap = (): void => {
   const landOptions = styles.heightmap.landHeights.options;
   const oceanOptions = styles.heightmap.oceanHeights.options;
   const linesOnly = (o: typeof landOptions) => o.contours.mode === "only" || o.hachures.mode === "only";
-  const landFillsVisible = !linesOnly(landOptions);
-  const oceanFillsVisible = !linesOnly(oceanOptions);
+  const landFillsVisible = drawLand && !linesOnly(landOptions);
+  const oceanFillsVisible = !drawLand && !linesOnly(oceanOptions);
 
   // ocean cells
-  const renderOceanCells = oceanOptions.render;
+  const renderOceanCells = !drawLand;
   if (renderOceanCells && oceanFillsVisible) {
     const skip = oceanOptions.skip + 1 || 1;
     const relax = oceanOptions.relax;
@@ -169,7 +174,7 @@ export const drawHeightmap = (): void => {
 
     if (paths[height] && paths[height]!.length >= 10) {
       const terracing = heightOptions.terracing / 10 || 0;
-      const fillColor = getColor(height, scheme);
+      const fillColor = scheme(heightColorPosition(height));
 
       if (terracing) {
         group
@@ -186,7 +191,7 @@ export const drawHeightmap = (): void => {
   let smoothedHeights: Float64Array | undefined; // shared by contours and hachures
   const getSmoothedHeights = () => (smoothedHeights ??= smoothContourHeights(cells.h, cells.c));
 
-  if (landOptions.contours.mode !== "off" || (renderOceanCells && oceanOptions.contours.mode !== "off")) {
+  if ((drawLand && landOptions.contours.mode !== "off") || (renderOceanCells && oceanOptions.contours.mode !== "off")) {
     const { points, elevations } = getContourSurface(getSmoothedHeights());
 
     for (const [group, options, isOcean] of [
@@ -194,7 +199,7 @@ export const drawHeightmap = (): void => {
       [ocean, oceanOptions, true]
     ] as const) {
       const contours = options.contours;
-      if (contours.mode === "off" || (isOcean && !renderOceanCells)) continue;
+      if (contours.mode === "off" || isOcean === drawLand) continue;
       const thresholds = isOcean
         ? range(20 - contours.interval, 0, -contours.interval)
         : range(20 + contours.interval, 100, contours.interval);
@@ -218,7 +223,7 @@ export const drawHeightmap = (): void => {
     }
   }
 
-  if (landOptions.hachures.mode !== "off" || (renderOceanCells && oceanOptions.hachures.mode !== "off")) {
+  if ((drawLand && landOptions.hachures.mode !== "off") || (renderOceanCells && oceanOptions.hachures.mode !== "off")) {
     const smoothed = smoothContourHeights(getSmoothedHeights(), cells.c); // twice: a calm fall line
     const { points, elevations } = getContourSurface(smoothed);
     for (const [group, heightOptions, isOcean] of [
@@ -226,7 +231,7 @@ export const drawHeightmap = (): void => {
       [ocean, oceanOptions, true]
     ] as const) {
       const hachures = heightOptions.hachures;
-      if (hachures.mode === "off" || (isOcean && !renderOceanCells)) continue;
+      if (hachures.mode === "off" || isOcean === drawLand) continue;
       const path = getHachures({
         points,
         heights: elevations,
@@ -298,7 +303,7 @@ export const drawHeightmap = (): void => {
   }
 
   TIME && console.timeEnd("drawHeightmap");
-};
+}
 
 // draw raster heightmap preview (not used in main generation)
 /**
@@ -316,13 +321,15 @@ export const drawHeights = ({
   width,
   height,
   scheme,
-  renderOcean
+  renderOcean,
+  oceanOnly = false
 }: {
-  heights: number[];
+  heights: ArrayLike<number>;
   width: number;
   height: number;
   scheme: (value: number) => string;
   renderOcean: boolean;
+  oceanOnly?: boolean;
 }) => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -330,10 +337,10 @@ export const drawHeights = ({
   const ctx = canvas.getContext("2d")!;
   const imageData = ctx.createImageData(width, height);
 
-  const getHeight = (height: number) => (height < 20 ? (renderOcean ? height : 0) : height);
-
   for (let i = 0; i < heights.length; i++) {
-    const colorScheme = scheme(1 - getHeight(heights[i]) / 100);
+    const value = heights[i];
+    const colorScheme =
+      oceanOnly && value >= 20 ? "#647074" : scheme(heightColorPosition(value < 20 && !renderOcean ? 0 : value));
     const { r, g, b } = color(colorScheme)?.rgb() ?? { r: 0, g: 0, b: 0 };
 
     const n = i * 4;

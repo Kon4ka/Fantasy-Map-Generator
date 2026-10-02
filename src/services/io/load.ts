@@ -1,7 +1,7 @@
 import { select } from "d3";
 import { fitMapToScreen } from "@/components/canvas";
 import { closeDialogs } from "@/components/dialog/dialog-helpers";
-import { Layers } from "@/components/layers";
+import { Layers, restoreMapLayers } from "@/components/layers";
 import { registerMap } from "@/components/lifecycle";
 import { pickMapFile } from "@/components/options/io-panes";
 import { syncOptionInputs } from "@/components/options/tabs/options-tab";
@@ -18,6 +18,8 @@ import { declareFont } from "@/services/fonts";
 import { logStats } from "@/services/logging";
 import { clearCache, compareVersions, isValidVersion, parseMapVersion, VERSION } from "@/services/versioning";
 import { ensureEl, escapeHtml, last, link, parseError, rn, safeParseJSON } from "@/utils";
+import { associateMapFile, MapFiles } from "./map-file";
+import { normalizeMapSvg } from "./map-format";
 
 async function quickLoad(): Promise<void> {
   const blob = await ldb.get("lastMap");
@@ -149,7 +151,7 @@ function uploadMap(file: Blob, callback?: () => void): void {
     if (isInvalid) return showUploadMessage("invalid", mapData, mapVersion);
 
     const isUpdated = compareVersions(mapVersion!, VERSION).isEqual;
-    if (isUpdated) return showUploadMessage("updated", mapData, mapVersion);
+    if (isUpdated) return showUploadMessage("updated", mapData, mapVersion, file);
 
     const isAncient = compareVersions(mapVersion!, "0.70.0").isOlder;
     if (isAncient) return showUploadMessage("ancient", mapData, mapVersion);
@@ -158,7 +160,7 @@ function uploadMap(file: Blob, callback?: () => void): void {
     if (isNewer) return showUploadMessage("newer", mapData, mapVersion);
 
     const isOutdated = compareVersions(mapVersion!, VERSION).isOlder;
-    if (isOutdated) return showUploadMessage("outdated", mapData, mapVersion);
+    if (isOutdated) return showUploadMessage("outdated", mapData, mapVersion, file);
   };
 
   fileReader.readAsArrayBuffer(file);
@@ -190,14 +192,7 @@ async function parseLoadedResult(
     const isDelimited = resultAsString.substring(0, 10).includes("|");
     let content = isDelimited ? resultAsString : decodeURIComponent(atob(resultAsString));
 
-    // fix if svg part has CRLF line endings instead of LF
-    const svgMatch = content.match(/<svg[^>]*id="map"[\s\S]*?<\/svg>/);
-    const svgContent = svgMatch![0];
-    const hasCrlfEndings = svgContent.includes("\r\n");
-    if (hasCrlfEndings) {
-      const correctedSvgContent = svgContent.replace(/\r\n/g, "\n");
-      content = content.replace(svgContent, correctedSvgContent);
-    }
+    content = normalizeMapSvg(content);
 
     const mapData = content.split("\r\n"); // split by CRLF
     const mapVersion = parseMapVersion(mapData[0].split("|")[0] || mapData[0] || "");
@@ -212,7 +207,7 @@ async function parseLoadedResult(
   }
 }
 
-function showUploadMessage(type: string, mapData: string[] | null, mapVersion: string | null): void {
+function showUploadMessage(type: string, mapData: string[] | null, mapVersion: string | null, file?: Blob): void {
   let message = "";
   let title = "";
 
@@ -220,7 +215,7 @@ function showUploadMessage(type: string, mapData: string[] | null, mapVersion: s
     message = "The file does not look like a valid save file.<br>Please check the data format";
     title = "Invalid file";
   } else if (type === "updated") {
-    parseLoadedData(mapData!, mapVersion);
+    void parseLoadedData(mapData!, mapVersion, file);
     return;
   } else if (type === "ancient") {
     const archive = link("https://github.com/Azgaar/Fantasy-Map-Generator/wiki/Changelog", "archived version");
@@ -231,7 +226,7 @@ function showUploadMessage(type: string, mapData: string[] | null, mapVersion: s
     title = "Newer file";
   } else if (type === "outdated") {
     INFO && console.info(`Loading map. Auto-updating from ${mapVersion} to ${VERSION}`);
-    parseLoadedData(mapData!, mapVersion);
+    void parseLoadedData(mapData!, mapVersion, file);
     return;
   }
 
@@ -247,7 +242,7 @@ function showUploadMessage(type: string, mapData: string[] | null, mapVersion: s
   });
 }
 
-async function parseLoadedData(data: string[], mapVersion: string | null): Promise<void> {
+async function parseLoadedData(data: string[], mapVersion: string | null, file?: Blob): Promise<void> {
   let isLogGroupOpen = false;
 
   try {
@@ -260,6 +255,7 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
     migrateLegacySettings(mapVersion!, data);
     const settings = data[1] ? safeParseJSON(data[1]) : null;
     if (!settings) throw new Error("Map settings are missing or malformed");
+    MapFiles.clear();
     Options.applyLoaded(settings);
     syncOptionInputs();
     setStylePresetSelect();
@@ -384,7 +380,7 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
     const styleRecord = data[48] ? safeParseJSON(data[48]) : undefined; // data[48] should be already migrated by auto-update
     Styles.set(Styles.parse(styleRecord));
 
-    if (data[50]) Layers.restore(JSON.parse(data[50]));
+    if (data[50]) restoreMapLayers(JSON.parse(data[50]));
     if (data[51]) GraphOverride.restore(JSON.parse(data[51]));
 
     Goods.sync();
@@ -683,6 +679,8 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
 
     const mapCreatedAt = +data[0].split("|")[6] || Date.now();
     registerMap(mapCreatedAt);
+    if (file instanceof File) await associateMapFile(file);
+    window.dispatchEvent(new Event("map:file-saved"));
     logStats();
     tip("Map is successfully loaded", true, "success", 7000);
   } catch (error) {

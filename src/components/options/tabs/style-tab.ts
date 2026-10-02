@@ -1,5 +1,7 @@
 // Style tab markup. The controls are still driven by the classic public/modules/ui/style.js
 import "@/components/options/tabs/burg-icon-picker";
+import { initializeHeightmapSchemes } from "@/components/heightmap-color-schemes";
+import { Controllers } from "@/controllers";
 import { ensureEl } from "@/utils/nodeUtils";
 
 const TEMPLATE = /* html */ `
@@ -50,6 +52,7 @@ const TEMPLATE = /* html */ `
     <option value="goodsBurgs">Goods: burg plates</option>
     <option value="gridOverlay">Grid</option>
     <option value="terrs">Heightmap</option>
+    <option value="oceanHeights">Ocean depths</option>
     <option value="ice">Ice</option>
     <option value="journeys">Journeys</option>
     <option value="labels">Labels</option>
@@ -189,13 +192,24 @@ const TEMPLATE = /* html */ `
       <tr data-tip="Select color scheme for the element">
         <td>Color scheme</td>
         <td>
-          <select id="styleHeightmapScheme" style="width: 86%"></select>
+          <div style="display: flex; align-items: center; gap: 3px; width: 100%">
+          <select id="styleHeightmapScheme" style="flex: 1; min-width: 0; width: 0"></select>
           <button
             id="openCreateHeightmapSchemeButton"
             data-tip="Click to add a custom heightmap color scheme"
-            data-stops="#ffffff,#EEEECC,#D2B48C,#008000,#008080"
-            class="icon-plus sideButton"
+            class="icon-plus"
+            style="flex: 0 0 1.8em; padding: 0"
           ></button>
+          <button id="editHeightmapSchemeButton" class="icon-pencil" style="flex: 0 0 1.8em; padding: 0" aria-label="Edit custom color palette" data-tip="Edit custom color palette" disabled></button>
+          <button id="deleteHeightmapSchemeButton" class="icon-trash" style="flex: 0 0 1.8em; padding: 0" aria-label="Delete custom color palette" data-tip="Delete custom color palette" disabled></button>
+          </div>
+        </td>
+      </tr>
+      <tr id="styleOceanDepthsRegenerate" style="display: none">
+        <td colspan="2">
+          <button id="styleRegenerateOceanDepths" data-tip="Rebuild sea-floor depths without changing land, coastlines or lakes">
+            Regenerate depths
+          </button>
         </td>
       </tr>
     </tbody>
@@ -1010,3 +1024,11 @@ const TEMPLATE = /* html */ `
 `;
 
 ensureEl("styleContent").innerHTML = TEMPLATE;
+initializeHeightmapSchemes();
+ensureEl("openCreateHeightmapSchemeButton").addEventListener("click", () => Controllers.HeightmapColorEditor.open());
+ensureEl("editHeightmapSchemeButton").addEventListener("click", () => Controllers.HeightmapColorEditor.open(true));
+ensureEl("deleteHeightmapSchemeButton").addEventListener("click", () => Controllers.HeightmapColorEditor.remove());
+ensureEl("styleRegenerateOceanDepths").addEventListener("click", async () => {
+  const { MAP_COMMANDS } = await import("@/components/map-commands");
+  MAP_COMMANDS.find(command => command.id === "regenerateOceanDepths")?.run();
+});

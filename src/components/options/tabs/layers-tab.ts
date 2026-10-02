@@ -15,6 +15,7 @@ export interface LayerButton {
 export const LAYER_TOGGLES = new Map<LayerId, LayerButton>([
   ["texture", { label: "Te<u>x</u>ture", shortcut: "KeyX" }],
   ["heightmap", { label: "<u>H</u>eightmap", shortcut: "KeyH" }],
+  ["oceanDepths", { label: "Ocean depths" }],
   ["lakes", { label: "Lakes", shortcut: "KeyQ" }],
   ["biomes", { label: "<u>B</u>iomes", shortcut: "KeyB" }],
   ["cells", { label: "C<u>e</u>lls", shortcut: "KeyE" }],

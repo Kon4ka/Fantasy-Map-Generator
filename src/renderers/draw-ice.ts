@@ -1,5 +1,6 @@
 import { select } from "d3";
 import type { Ice } from "@/generators/ice-generator";
+import { redrawRelief } from "./draw-relief-icons";
 
 export const drawIce = (): void => {
   TIME && console.time("drawIce");
@@ -16,6 +17,7 @@ export const drawIce = (): void => {
   });
 
   select("#ice").html(html);
+  redrawRelief();
 
   TIME && console.timeEnd("drawIce");
 };
@@ -52,6 +54,7 @@ export const redrawGlacier = (id: number): void => {
     el.attr("points", glacier.points.toString());
     el.attr("transform", glacier.offset ? `translate(${glacier.offset[0]},${glacier.offset[1]})` : null);
   }
+  redrawRelief();
 };
 
 function getGlacierHtml(glacier: Ice): string {

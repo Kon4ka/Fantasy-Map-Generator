@@ -21,6 +21,7 @@ vi.mock("@/data/heightmap-templates", () => ({
 vi.mock("@/data/precreated-heightmaps", () => ({ precreatedHeightmaps: {} }));
 vi.mock("@/renderers/draw-heightmap", () => ({
   drawHeightmap: vi.fn(),
+  drawOceanDepths: vi.fn(),
   drawHeights: vi.fn(() => "data:image/png;base64,")
 }));
 

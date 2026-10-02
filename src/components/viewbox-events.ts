@@ -5,11 +5,12 @@ import type { LabelType } from "@/generators/labels-generator";
 import { dragLegendBox } from "@/renderers/draw-legend";
 import { debounce } from "@/utils/commonUtils";
 import { handleMouseMove } from "./map-tooltip";
-import { applyZoomBehavior } from "./zoom";
+import { applyZoomBehavior, setMapBrushActive } from "./zoom";
 
 const onMouseMove = debounce(handleMouseMove, 100);
 
 export function applyDefaultViewboxEvents(): void {
+  setMapBrushActive(false);
   applyZoomBehavior();
 
   select<SVGGElement, unknown>("#viewbox")

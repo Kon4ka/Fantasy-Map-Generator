@@ -14,7 +14,9 @@ import {
 } from "@/components/dialog/table";
 import { Layers } from "@/components/layers";
 import { Notes } from "@/components/notes";
+import { tip } from "@/components/tooltips";
 import { Controllers } from "@/controllers";
+import { refitFeatureLabels } from "@/generators/feature-labels";
 import {
   type Feature,
   type FeatureType,
@@ -145,6 +147,7 @@ function renderDialog(): void {
     </div>
     <div id="featuresBottom" class="editorToolbar">
       <button id="featuresOverviewRefresh" data-tip="Refresh the Overview" class="icon-cw"></button>
+      <button id="featuresRefitLabels" data-tip="Recalculate all geographical feature labels" aria-label="Recalculate all geographical feature labels" class="icon-arrows-cw">Refit labels</button>
       <button id="featuresHeightmapEditor" data-tip="Features are added and removed in the Heightmap Editor" class="icon-brush"></button>
       <button id="featuresExport" data-tip="Save features-related data as a text file (.csv)" class="icon-download"></button>
     </div>
@@ -163,6 +166,7 @@ function renderDialog(): void {
   });
 
   ensureEl("featuresOverviewRefresh").addEventListener("click", refreshOverview);
+  ensureEl("featuresRefitLabels").addEventListener("click", refitAllFeatureLabels);
   ensureEl("featuresHeightmapEditor").addEventListener("click", () => void Controllers.HeightmapEditor.open());
   ensureEl("featuresExport").addEventListener("click", downloadFeaturesData);
   ensureEl("featuresSearch").addEventListener("input", onFilterChange);
@@ -183,6 +187,23 @@ function refreshOverview(): void {
   oceanPaths.clear();
   updateSubtypeFilter();
   featuresTable.reset();
+}
+
+export function refitAllFeatureLabels(): void {
+  refitFeatureLabels(pack);
+  Labels.restoreMissingTypes(options.map.labels.groups);
+  const groups = new Set(
+    pack.addedLabels.filter(label => label.featureId !== undefined).map(label => label.label.group || "added")
+  );
+  for (const group of options.map.labels.groups) if (groups.has(group.name)) delete group.active;
+  Layers.show("labels");
+  Layers.draw("labels");
+  tip(
+    "Geographical feature labels were placed inside their objects; unrelated annotations were preserved",
+    false,
+    "success",
+    5000
+  );
 }
 
 /** Subtype options follow the selected type; "all" offers every subtype */
@@ -367,7 +388,10 @@ function zoomToFeature(element: HTMLElement): void {
 }
 
 function changeName(input: HTMLElement): void {
-  getFeature(input).name = (input as HTMLInputElement).value.trim();
+  const feature = getFeature(input);
+  feature.name = (input as HTMLInputElement).value.trim();
+  for (const added of pack.addedLabels) if (added.featureId === feature.i) added.label.text = feature.name;
+  Layers.draw("labels");
 }
 
 function changeSubtype(select: HTMLElement): void {

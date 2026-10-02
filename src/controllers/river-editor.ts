@@ -96,7 +96,7 @@ function renderDialog(): void {
       </div>
     </div>
     <div id="riverBottom">
-      <button id="riverCreateSelectingCells" data-tip="Create a new river selecting river cells" class="icon-map-pin"></button>
+      <button id="riverCreateSelectingCells" data-tip="Draw a new river with the brush" class="icon-brush"></button>
       <button id="riverEditStyle" data-tip="Edit style for all rivers in Style Editor" class="icon-brush"></button>
       <button id="riverElevationProfile" data-tip="Show the elevation profile for the river" class="icon-chart-area"></button>
       ${Notes.getButton("riverLegend", "this river")}

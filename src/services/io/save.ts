@@ -7,14 +7,15 @@ import { tip } from "@/components/tooltips";
 import { GraphOverride } from "@/generators/graph-override";
 import { Services } from "@/services";
 import { getUsedFonts } from "@/services/fonts";
-import { savedMessage } from "@/services/platform";
 import { VERSION } from "@/services/versioning";
 import { ensureEl, getFileName, link, parseError, rn } from "@/utils";
+import { MapFiles } from "./map-file";
 
 type Writer = (mapData: string, filename: string) => void | Promise<void>;
 
 const toStorage = (): Promise<void> => save(mapData => writeToStorage(mapData, true));
 const toMachine = (): Promise<void> => save(writeToMachine);
+const toMachineAs = (): Promise<void> => save((data, filename) => writeToMachine(data, filename, true));
 const toDropbox = (): Promise<void> => save(writeToDropbox);
 
 async function save(write: Writer): Promise<void> {
@@ -24,6 +25,7 @@ async function save(write: Writer): Promise<void> {
   try {
     await write(prepareMapData(), `${getFileName()}.map`);
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
     ERROR && console.error(error);
     alertMessage.innerHTML = /* html */ `An error occurred while saving the map. If the issue persists, please copy the message below and report it on ${link(
       "https://github.com/Azgaar/Fantasy-Map-Generator/issues",
@@ -204,18 +206,25 @@ async function writeToStorage(mapData: string, showTip = false): Promise<void> {
   showTip && tip("Map is saved to the browser storage", false, "success");
 }
 
-// download map file
-function writeToMachine(mapData: string, filename: string): void {
-  const blob = new Blob([mapData], { type: "text/plain" });
-  const URL = window.URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = URL;
-  link.click();
-
-  tip(savedMessage("Map"), true, "success", 8000);
-  setTimeout(() => window.URL.revokeObjectURL(URL), 5000);
+let savingFile = false;
+async function writeToMachine(mapData: string, _filename: string, saveAs = false): Promise<void> {
+  if (savingFile) return;
+  savingFile = true;
+  try {
+    const result = await MapFiles.save(mapData, `${options.map.lore.name}.map`, saveAs);
+    if (!result) return;
+    tip(
+      result.downloaded
+        ? "Map downloaded. This browser cannot overwrite files; use Chrome or Edge for direct saving."
+        : "Map file saved",
+      true,
+      "success",
+      8000
+    );
+    window.dispatchEvent(new Event("map:file-saved"));
+  } finally {
+    savingFile = false;
+  }
 }
 
 async function writeToDropbox(mapData: string, filename: string): Promise<void> {
@@ -223,4 +232,4 @@ async function writeToDropbox(mapData: string, filename: string): Promise<void> 
   tip("Map is saved to your Dropbox", true, "success", 8000);
 }
 
-export const Save = { toStorage, toMachine, toDropbox, prepareMapData, writeToStorage };
+export const Save = { toStorage, toMachine, toMachineAs, toDropbox, prepareMapData, writeToStorage };

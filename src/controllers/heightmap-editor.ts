@@ -28,6 +28,7 @@ import { removeEmblem } from "@/renderers/draw-emblems";
 import { moveCircle, removeCircle } from "@/renderers/overlays/brush-circle";
 import { drawDrainage, removeDrainage } from "@/renderers/overlays/drainage";
 import { downloadFile, getFileName, uploadFile } from "@/utils";
+import { heightColorPosition } from "@/utils/heightmap-colors";
 import {
   createFileInput,
   ensureEl,
@@ -370,6 +371,7 @@ function showModeDialog(tool?: string): void {
 
 function enterHeightmapEditMode(mode: HeightmapEditMode, tool?: string): void {
   storedLayers = Layers.state.active;
+  if (storedLayers.includes("oceanDepths")) Options.set(o => (o.app.heightmapEditor.renderOcean = true));
   Layers.set([]); // turn off all layers
 
   customization = 1;
@@ -845,7 +847,11 @@ function updateHeightmap(): void {
 }
 
 function getColor(value: number, scheme = getColorScheme("bright")): string {
-  return scheme(1 - (value < 20 ? value - 5 : value) / 100);
+  return scheme(heightColorPosition(value));
+}
+
+export function getEditorHeightColor(height: number): string {
+  return getColor(height, getColorScheme(height < 20 ? styles.heightmap.oceanHeights.options.scheme : "bright"));
 }
 
 // draw or update heightmap
@@ -860,7 +866,7 @@ function mockHeightmap(): void {
     .join("polygon")
     .attr("points", (d: number) => String(Grid.getPolygon(d)))
     .attr("id", (d: number) => `cell${d}`)
-    .attr("fill", (d: number) => getColor(grid.cells.h[d]));
+    .attr("fill", (d: number) => getEditorHeightColor(grid.cells.h[d]));
 }
 
 // draw or update heightmap for a selection of cells
@@ -881,7 +887,7 @@ function mockHeightmapSelection(selection: number[]): void {
         .attr("points", String(Grid.getPolygon(i)))
         .attr("id", `cell${i}`);
     }
-    cell.attr("fill", getColor(grid.cells.h[i]));
+    cell.attr("fill", getEditorHeightColor(grid.cells.h[i]));
   });
 }
 
@@ -1417,6 +1423,11 @@ function cellTypeFilterChange(): void {
     cellTypeFilter.value = "all";
   }
   filterState.cellType = cellTypeFilter.value as typeof filterState.cellType;
+  if (filterState.cellType === "water") {
+    Options.set(o => (o.app.heightmapEditor.renderOcean = true));
+    ensureEl<HTMLInputElement>("renderOcean").checked = true;
+    mockHeightmap();
+  }
   dialogState.set(dialogId, "filters", filterState);
 }
 

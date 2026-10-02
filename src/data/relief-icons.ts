@@ -9,6 +9,7 @@ export const RELIEF_SETS: Record<ReliefSet, ReliefSetDefinition> = {
 
 export const RELIEF_ICONS: ReliefTypeIcons[] = [
   { set: "simple", type: "mount", variants: [1] },
+  { set: "simple", type: "mountSnow", variants: [0] },
   { set: "simple", type: "hill", variants: [1] },
   { set: "simple", type: "deciduous", variants: [1], zoom: 1.5 },
   { set: "simple", type: "conifer", variants: [1], zoom: 1.5 },

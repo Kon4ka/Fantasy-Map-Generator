@@ -169,6 +169,7 @@ function renderDialog(): void {
       <button id="culturesExport" data-tip="Download cultures-related data" class="icon-download"></button>
       <button id="culturesImport" data-tip="Upload cultures-related data" class="icon-upload"></button>
       <button id="culturesRecalculate" data-tip="Recalculate cultures based on current values of growth-related attributes" class="icon-retweet"></button>
+      <button id="culturesClear" data-tip="Clear culture assignments while keeping the culture list" aria-label="Clear culture assignments" class="icon-eraser">Clear</button>
       <span
         data-tip="Allow culture centers, expansion and type changes to take an immediate effect"
         class="editorToolbarPanel"
@@ -195,6 +196,7 @@ function renderDialog(): void {
   ensureEl("culturesPercentage").addEventListener("click", togglePercentageMode);
   ensureEl("culturesHeirarchy").addEventListener("click", showHierarchy);
   ensureEl("culturesRecalculate").addEventListener("click", () => recalculateCultures(true));
+  ensureEl("culturesClear").addEventListener("click", clearCulturesPrompt);
   ensureEl("culturesManually").addEventListener("click", openPaintEditor);
   ensureEl("culturesEditNamesBase").addEventListener("click", () => Controllers.NamesbaseEditor.open());
   ensureEl("culturesAdd").addEventListener("click", enterAddCulturesMode);
@@ -897,6 +899,30 @@ function recalculateCultures(force?: boolean): void {
       b.culture = pack.cells.culture[b.cell];
     });
     refreshCulturesEditor();
+  }
+}
+
+function clearCulturesPrompt(): void {
+  if (customization) return;
+  confirmationDialog({
+    title: "Clear culture assignments",
+    message:
+      "Clear cultures from all territories and settlements? The culture list, countries and population will be preserved. Auto-apply will be disabled. Save your map first: this action cannot be reverted.",
+    confirm: "Clear",
+    onConfirm: () => {
+      clearCultureAssignments();
+      ensureEl<HTMLInputElement>("culturesAutoChange").checked = false;
+      clearLegend(LEGEND_NAME);
+      Layers.draw("cultures");
+      refreshCulturesEditor();
+    }
+  });
+}
+
+export function clearCultureAssignments(): void {
+  pack.cells.culture.fill(0);
+  for (const burg of pack.burgs) {
+    if (burg.i && !burg.removed) burg.culture = 0;
   }
 }
 

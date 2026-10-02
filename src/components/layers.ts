@@ -9,7 +9,7 @@ import { drawCultures } from "@/renderers/draw-cultures";
 import { drawEmblems, removeEmblems } from "@/renderers/draw-emblems";
 import { drawGoods, removeGoods } from "@/renderers/draw-goods";
 import { drawGrid } from "@/renderers/draw-grid";
-import { drawHeightmap } from "@/renderers/draw-heightmap";
+import { drawHeightmap, drawOceanDepths } from "@/renderers/draw-heightmap";
 import { drawIce } from "@/renderers/draw-ice";
 import { drawJourneys } from "@/renderers/draw-journeys";
 import { drawLakes } from "@/renderers/draw-lakes";
@@ -282,10 +282,17 @@ const mapLayers = [
   new Layer({ id: "landmass", parent: "viewbox", permanent: true, keepContent: true, draw: drawLandmass }),
   new Layer({ id: "texture", element: "texture", parent: "viewbox", draw: drawTexture }),
   new Layer({
+    id: "oceanDepths",
+    element: "oceanHeights",
+    parent: "viewbox",
+    attrs: { mask: "url(#water)" },
+    draw: drawOceanDepths
+  }),
+  new Layer({
     id: "heightmap",
     element: "terrs",
     parent: "viewbox",
-    children: ["oceanHeights", "landHeights"].map(id => ({ id, tag: "g" })),
+    children: [{ id: "landHeights", tag: "g" }],
     draw: drawHeightmap
   }),
   new Layer({
@@ -305,6 +312,7 @@ const mapLayers = [
     children: [{ id: "compassRose", tag: "use", attrs: { href: "#defs-compass-rose" } }]
   }),
   new Layer({ id: "rivers", parent: "viewbox", draw: drawRivers, erase: removeRivers }),
+  new Layer({ id: "ice", parent: "viewbox", draw: drawIce }),
   new Layer({ id: "relief", element: "terrain", parent: "viewbox", draw: drawRelief, erase: removeRelief }),
   new Layer({ id: "religions", element: "relig", parent: "viewbox", draw: drawReligions }),
   new Layer({ id: "cultures", element: "cults", parent: "viewbox", draw: drawCultures }),
@@ -339,7 +347,6 @@ const mapLayers = [
     keepContent: true,
     draw: drawCoastline
   }),
-  new Layer({ id: "ice", parent: "viewbox", draw: drawIce }),
   new Layer({
     id: "goods",
     parent: "viewbox",
@@ -420,5 +427,20 @@ declare global {
 
 // biome-ignore lint/suspicious/noRedeclare: legacy seam for public/modules/**/*.js
 export const Layers = new LayersRegistry(mapLayers);
+
+/** Upgrade presentation only; old maps retain their combined elevation/depth visibility. */
+export function restoreMapLayers(state: LayersState): void {
+  const order = [...state.order];
+  const ice = order.indexOf("ice");
+  const relief = order.indexOf("relief");
+  if (ice !== -1 && relief !== -1 && ice > relief) {
+    order.splice(ice, 1);
+    order.splice(relief, 0, "ice");
+  }
+  const active = [...state.active];
+  if (!order.includes("oceanDepths") && active.includes("heightmap") && styles.heightmap.oceanHeights.options.render)
+    active.push("oceanDepths");
+  Layers.restore({ order, active });
+}
 
 window.Layers = Layers;

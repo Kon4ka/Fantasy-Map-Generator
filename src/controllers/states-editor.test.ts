@@ -79,6 +79,13 @@ describe("reconcilePaintedStates", () => {
 });
 
 describe("refitAllStateLabels", () => {
+  it("preserves geographic labels even when their name matches a state", () => {
+    pack.addedLabels = [{ i: 1, x: 10, y: 20, featureId: 2, label: { text: "Old center" } }];
+    refitAllStateLabels();
+    expect(pack.addedLabels).toHaveLength(1);
+    expect(pack.addedLabels[0].featureId).toBe(2);
+  });
+
   it("migrates legacy state-name labels and redraws active state labels", () => {
     pack.states[1].label = { text: "Old center", pathPoints: [[1, 1]] };
     pack.states[2].label = { text: "New owner", dx: 40, dy: 20 };

@@ -1,13 +1,16 @@
-import { select } from "d3";
+import { type D3DragEvent, drag, select } from "d3";
 import { closeDialogs, destroyDialog } from "@/components/dialog/dialog-helpers";
 import { Layers } from "@/components/layers";
 import { clearMainTip, tip } from "@/components/tooltips";
 import { applyDefaultViewboxEvents } from "@/components/viewbox-events";
+import { setMapBrushActive } from "@/components/zoom";
 import { Controllers } from "@/controllers";
 import type { Point } from "@/generators/voronoi";
-import { ensureEl, getPointer, last, rn } from "../utils";
+import { ensureEl, last, rn } from "../utils";
+import { getRiverBrushCells, orientRiverBrushCells } from "./river-brush";
 
 let creatorCells: number[] = [];
+let brushActive = false;
 
 let isCellsLayerForced = false; // the cells layer is turned on for the editing mode
 
@@ -19,12 +22,12 @@ function open(): void {
   isCellsLayerForced = !Layers.isOn("cells");
   Layers.show("cells");
 
-  tip("Click to add river point, click again to remove", true);
   select("#debug").append("g").attr("id", "controlCells");
-  select<SVGElement, unknown>("#viewbox").style("cursor", "crosshair").on("click", onCellClick);
+  select("#debug").append("polyline").attr("id", "riverBrushPreview");
 
   creatorCells = [];
   renderDialog();
+  setBrushActive(true);
 
   $("#riverCreator").dialog({
     title: "Create River",
@@ -38,8 +41,11 @@ function renderDialog(): void {
   destroyDialog("riverCreator");
 
   const html = /* html */ `<div id="riverCreator" class="dialog">
+    <div id="riverCreatorMode" style="max-width: 24em; white-space: normal"></div>
     <div id="riverCreatorBody" class="table"></div>
     <div id="riverCreatorBottom">
+      <button id="riverCreatorBrush" data-tip="Toggle river brush" aria-pressed="true"><i class="icon-brush"></i> Brush</button>
+      <button id="riverCreatorUndo" data-tip="Remove the last river point" class="icon-ccw"></button>
       <button id="riverCreatorComplete" data-tip="Complete river creation" class="icon-check"></button>
       <button id="riverCreatorCancel" data-tip="Cancel the creation" class="icon-cancel"></button>
     </div>
@@ -48,6 +54,11 @@ function renderDialog(): void {
 
   // add listeners — dropped together with the dialog HTML on close
   ensureEl("riverCreatorComplete").addEventListener("click", addRiver);
+  ensureEl("riverCreatorBrush").addEventListener("click", () => setBrushActive(!brushActive));
+  ensureEl("riverCreatorUndo").addEventListener("click", () => {
+    const cell = creatorCells.at(-1);
+    if (cell !== undefined) removeCell(cell);
+  });
   ensureEl("riverCreatorCancel").addEventListener("click", cancelCreation);
   ensureEl("riverCreatorBody").addEventListener("click", onBodyClick);
 }
@@ -64,16 +75,50 @@ function onBodyClick(ev: Event): void {
   else if (cl.contains("icon-trash-empty")) removeCell(cell);
 }
 
-function onCellClick(this: any, event: any): void {
-  const cell = Pack.findCell(...(getPointer(event, this) as [number, number]))!;
+function setBrushActive(active: boolean): void {
+  brushActive = active;
+  applyDefaultViewboxEvents();
+  setMapBrushActive(active);
+  const button = ensureEl("riverCreatorBrush");
+  button.classList.toggle("pressed", active);
+  button.setAttribute("aria-pressed", String(active));
+  const message = active
+    ? "Draw in either direction with the left mouse button. The water-connected end becomes the mouth. Middle mouse button pans the map."
+    : "Brush is off. Drag the map normally, or enable the brush to continue the river.";
+  ensureEl("riverCreatorMode").textContent = message;
+  tip(message, true);
+  if (!active) return;
 
-  if (creatorCells.includes(cell)) removeCell(cell);
-  else addCell(cell);
+  select<SVGGElement, unknown>("#viewbox")
+    .style("cursor", "crosshair")
+    .on("click", null)
+    .call(
+      drag<SVGGElement, unknown>()
+        .container(function () {
+          return this;
+        })
+        .filter((event: MouseEvent) => !event.button && !event.ctrlKey)
+        .on("start", drawStroke)
+    );
+}
+
+function drawStroke(event: D3DragEvent<SVGGElement, unknown, unknown>): void {
+  let previous: Point = [event.x, event.y];
+  const paint = (point: Point): void => {
+    if (!brushActive) return;
+    const cells = getRiverBrushCells(previous, point, (x, y) => Pack.findCell(x, y));
+    for (const cell of cells) {
+      if (!creatorCells.includes(cell)) addCell(cell);
+    }
+    drawCells(creatorCells);
+    previous = point;
+  };
+  paint(previous);
+  event.on("drag", (move: D3DragEvent<SVGGElement, unknown, unknown>) => paint([move.x, move.y]));
 }
 
 function addCell(cell: number): void {
   creatorCells.push(cell);
-  drawCells(creatorCells);
 
   const flux = pack.cells.fl[cell];
   const line = `<div class="editorLine" data-cell="${cell}">
@@ -82,7 +127,7 @@ function addCell(cell: number): void {
       <input type="number" min=0 value="${flux}" class="editFlux" style="width: 5em"/>
       <span data-tip="Remove the cell" class="icon-trash-empty pointer"></span>
     </div>`;
-  ensureEl("riverCreatorBody").innerHTML += line;
+  ensureEl("riverCreatorBody").insertAdjacentHTML("beforeend", line);
 }
 
 function removeCell(cell: number): void {
@@ -92,6 +137,7 @@ function removeCell(cell: number): void {
 }
 
 function drawCells(cells: number[]): void {
+  select("#riverBrushPreview").attr("points", cells.map(cell => pack.cells.p[cell].join(",")).join(" "));
   select("#debug")
     .select("#controlCells")
     .selectAll(`polygon`)
@@ -103,21 +149,27 @@ function drawCells(cells: number[]): void {
 
 function addRiver(): void {
   const { rivers: packRivers, cells } = pack;
-  const riverCells = creatorCells;
+  const riverCells = orientRiverBrushCells(creatorCells, cells);
   if (riverCells.length < 2) {
     tip("Add at least 2 cells", false, "error");
     return;
   }
 
+  if (!riverCells.some(cell => cells.h[cell] >= 20)) {
+    tip("A river must include at least one land cell", false, "error");
+    return;
+  }
+
   const riverId = Rivers.getNextId(packRivers);
-  const parent = cells.r[last(riverCells)] || riverId;
+  const waterMouth = cells.h[last(riverCells)] < 20;
+  const parent = (!waterMouth && cells.r[last(riverCells)]) || riverId;
 
   riverCells.forEach(cell => {
-    if (!cells.r[cell]) cells.r[cell] = riverId;
+    if (cells.h[cell] >= 20 && !cells.r[cell]) cells.r[cell] = riverId;
   });
 
   const source = riverCells[0];
-  const mouth = parent === riverId ? last(riverCells) : riverCells[riverCells.length - 2];
+  const mouth = waterMouth || parent !== riverId ? riverCells[riverCells.length - 2] : last(riverCells);
   const sourceWidth = Rivers.getSourceWidth(cells.fl[source]);
   const defaultWidthFactor = rn(1 / (options.map.graph.points / 10000) ** 0.25, 2);
   const widthFactor = 1.2 * defaultWidthFactor;
@@ -157,7 +209,9 @@ function addRiver(): void {
 }
 
 function closeRiverCreator(): void {
+  brushActive = false;
   select("#debug").select("#controlCells").remove();
+  select("#riverBrushPreview").remove();
   applyDefaultViewboxEvents();
   clearMainTip();
 

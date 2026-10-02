@@ -1,12 +1,87 @@
 :root {
+  --ui-window-radius: 10px;
+  --ui-control-radius: 5px;
+  --ui-dialog-border: color-mix(in srgb, var(--text-dialogs) 16%, transparent);
+  --ui-panel-border: color-mix(in srgb, var(--text-light) 16%, transparent);
+  --ui-window-shadow: 0 8px 28px rgb(0 0 0 / 16%), 0 2px 6px rgb(0 0 0 / 8%);
   --monospace: Consolas, monospace;
   --serif: Georgia, serif;
   --sans-serif: Helvetica, Arial, sans-serif;
+  --ui-font: Helvetica, Arial, sans-serif;
   --text-main: #000000;
   --text-light: #000000;
   --text-header: #ffffff;
   --text-header-active: #ffffff;
   --text-disabled: #444444;
+  --bg-fields: #fafafa;
+  --bg-dialog-hover: #ebebeb;
+  --text-dialogs: #000000;
+  --text-dialog-muted: #666666;
+  --dialog-color-scheme: light;
+  --ui-accent: #785668;
+  --ui-dialog-accent: #785668;
+  --control-color: var(--ui-dialog-accent);
+  --control-ink: var(--text-dialogs);
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-color) transparent;
+}
+
+#dialogs .ui-dialog {
+  background: var(--bg-dialogs);
+}
+
+#dialogs .ui-widget-content {
+  color: var(--text-dialogs);
+}
+
+#dialogs input:not([type="range"]):not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+#dialogs select,
+#dialogs textarea,
+#dialogs option,
+#options option,
+#dialogs button {
+  background-color: var(--bg-fields);
+  color: var(--text-dialogs);
+  color-scheme: var(--dialog-color-scheme);
+}
+
+#dialogs .ui-widget-content a,
+#dialogs .separator {
+  color: var(--text-dialogs);
+}
+
+#dialogs .ui-dialog-titlebar button {
+  background-color: var(--header);
+  color: var(--text-header);
+}
+
+#dialogs .ui-dialog-titlebar button:hover {
+  background-color: var(--header-active);
+  color: var(--text-header-active);
+}
+
+#dialogs button:hover,
+#dialogs button.pressed,
+#dialogs .states:hover,
+#dialogs .states.hovered {
+  background: var(--bg-dialog-hover);
+}
+
+#dialogs .editorDialog .header,
+#dialogs #markerTypeSelectMenu {
+  background: var(--bg-fields);
+  color: var(--text-dialogs);
+}
+
+#dialogs .states {
+  background-image: none;
+  color: var(--text-dialogs);
+}
+
+#dialogs .totalLine,
+#dialogs .states > [class^="icon-"],
+#dialogs .states > .before {
+  color: var(--text-dialog-muted);
 }
 
 /* hide Google translate header */
@@ -426,7 +501,9 @@ button.ui-button:disabled:hover {
 
 #options input,
 #options select {
-  color: #000000;
+  color: var(--text-dialogs);
+  color-scheme: var(--dialog-color-scheme);
+  background-color: var(--bg-fields);
 }
 
 #options button {
@@ -605,13 +682,14 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 #options input.paired {
   text-align: center;
-  background-color: white;
-  color: #000000;
+  background-color: var(--bg-fields);
+  color: var(--text-dialogs);
 }
 
 #options input.long {
   width: 100%;
-  background-color: white;
+  background-color: var(--bg-fields);
+  color: var(--text-dialogs);
   text-align: left;
 }
 
@@ -688,21 +766,104 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   font-size: 2em;
 }
 
+#fileToolbar {
+  position: fixed;
+  left: 12px;
+  bottom: 16px;
+  z-index: 12;
+  color: var(--text-dialogs);
+  font: 13px var(--sans-serif);
+}
+
+#fileToolbarToggle,
 #sticked {
+  background: var(--bg-dialogs);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-window-radius);
+  box-shadow: var(--ui-window-shadow);
+  color: inherit;
+}
+
+#fileToolbarToggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  cursor: pointer;
+}
+
+#fileToolbar svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+#sticked {
+  position: absolute;
+  bottom: 0;
+  left: 44px;
+  width: max-content;
+  max-width: calc(100vw - 68px);
+  height: 38px;
+  box-sizing: border-box;
+  padding: 4px;
+  border-radius: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-18px);
+  transition: transform 160ms ease, opacity 160ms ease, visibility 160ms;
+}
+
+#fileToolbar.open #sticked {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.file-toolbar-actions {
   display: flex;
-  justify-content: space-evenly;
-  width: 100%;
+  gap: 2px;
 }
 
 #sticked button {
-  background-color: transparent;
-  font-weight: bold;
+  display: grid;
+  place-items: center;
+  flex: 0 1 28px;
+  width: 28px;
+  min-width: 24px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
   border: 0;
-  color: var(--text-light);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
-#sticked button:hover {
-  color: var(--text-light);
+#sticked button:hover,
+#fileToolbarToggle:hover,
+#fileToolbar.open #fileToolbarToggle {
+  background: color-mix(in srgb, var(--text-dialogs) 9%, var(--bg-dialogs));
+}
+
+#fileToolbar button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-dialogs) 55%, transparent);
+  outline-offset: 2px;
+}
+
+#currentMapFile {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sticked { transition: none; }
 }
 
 #exitCustomization {
@@ -859,8 +1020,51 @@ fieldset {
 }
 
 #optionsContent table {
+  width: 100%;
+  table-layout: fixed;
   border-spacing: 0;
   line-height: 1.2em;
+}
+
+#optionsContent td {
+  vertical-align: middle;
+}
+
+#options slider-input input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+}
+
+#options slider-input input[type="number"] {
+  flex: 0 0 3.3em;
+  min-width: 0;
+}
+
+#options select:not([multiple]):not([size]) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Separate from SVG/map font families and the map-label font catalog. */
+#options,
+#options *,
+#dialogs,
+#dialogs *,
+.ui-dialog.ui-widget,
+.ui-dialog.ui-widget *,
+#fileToolbar,
+#fileToolbar *,
+#tooltip,
+#notes,
+#notes * {
+  font-family: var(--ui-font);
+}
+
+#options select::picker(select),
+#dialogs select::picker(select) {
+  font-family: var(--ui-font);
 }
 
 #optionsContent table td:nth-of-type(1) {
@@ -1423,7 +1627,7 @@ div.slider .ui-slider-handle {
 #alertMessage::-webkit-scrollbar-thumb,
 .table::-webkit-scrollbar-thumb,
 .matrix-table::-webkit-scrollbar-thumb {
-  background-color: #aaa;
+  background-color: var(--control-color);
   border-radius: 6px;
 }
 
@@ -1431,7 +1635,7 @@ div.slider .ui-slider-handle {
 #alertMessage::-webkit-scrollbar-thumb:hover,
 .table::-webkit-scrollbar-thumb:hover,
 .matrix-table::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: color-mix(in srgb, var(--control-color) 80%, var(--control-ink));
 }
 
 .dialog {
@@ -2755,5 +2959,479 @@ body.tour-free-roam * {
   #helpAssistantBubble .helpAssistantBubbleMinimize {
     animation: none;
     transition: none;
+  }
+}
+
+/* Cosmetic overrides only: retain control sizes, editor layout and map styling. */
+#options {
+  border-color: var(--ui-panel-border);
+  border-radius: var(--ui-window-radius);
+  box-shadow: var(--ui-window-shadow);
+}
+
+#options .tab {
+  border-color: var(--ui-panel-border);
+  border-radius: calc(var(--ui-window-radius) - 1px) calc(var(--ui-window-radius) - 1px) 0 0;
+}
+
+#options .tab > button {
+  border-radius: 0;
+}
+
+#options .tab > button:first-child {
+  border-top-left-radius: calc(var(--ui-window-radius) - 1px);
+}
+
+#options .tab > button:last-child {
+  border-top-right-radius: calc(var(--ui-window-radius) - 1px);
+}
+
+#dialogs .ui-dialog {
+  border-color: var(--ui-dialog-border);
+  border-radius: var(--ui-window-radius);
+  box-shadow: var(--ui-window-shadow);
+}
+
+#dialogs .ui-dialog-titlebar {
+  border-radius: calc(var(--ui-window-radius) - 1px) calc(var(--ui-window-radius) - 1px) 0 0;
+}
+
+#dialogs .ui-dialog-content,
+#dialogs .ui-dialog-buttonpane {
+  border-bottom-left-radius: calc(var(--ui-window-radius) - 1px);
+  border-bottom-right-radius: calc(var(--ui-window-radius) - 1px);
+}
+
+#dialogs .ui-dialog-buttonpane,
+#dialogs .ui-widget-content {
+  border-color: var(--ui-dialog-border);
+}
+
+#options button,
+#options .tabcontent li,
+#dialogs button,
+#dialogs fieldset {
+  border-radius: var(--ui-control-radius);
+}
+
+#dialogs button {
+  border-color: var(--ui-dialog-border);
+  box-shadow: none;
+}
+
+#dialogs .ui-dialog-titlebar button {
+  border-color: transparent;
+  background: transparent;
+}
+
+#dialogs .ui-dialog-titlebar button:hover {
+  background: color-mix(in srgb, var(--text-header) 12%, transparent);
+  color: var(--text-header);
+}
+
+#dialogs .ui-dialog-titlebar button:active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-header) 20%, transparent);
+}
+
+#options input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+#options select,
+#options textarea,
+#dialogs input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+#dialogs select,
+#dialogs textarea {
+  border-radius: var(--ui-control-radius);
+  border-color: var(--ui-dialog-border);
+}
+
+#options input[type="color"]::-webkit-color-swatch,
+#dialogs input[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
+
+#options fieldset {
+  border-color: var(--ui-panel-border);
+  border-radius: var(--ui-control-radius);
+}
+
+#dialogs fieldset {
+  border-color: var(--ui-dialog-border);
+}
+
+#options .separator::before,
+#options .separator::after {
+  border-color: var(--ui-panel-border);
+}
+
+#dialogs .separator::before,
+#dialogs .separator::after {
+  border-color: var(--ui-dialog-border);
+}
+
+#options input[type="number"]:hover {
+  outline-color: var(--ui-panel-border);
+}
+
+#options :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-light) 55%, transparent);
+  outline-offset: 2px;
+}
+
+#dialogs :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-dialogs) 55%, transparent);
+  outline-offset: 2px;
+}
+
+#dialogs .ui-dialog-titlebar button:focus-visible {
+  outline-color: var(--text-header);
+}
+
+#options .checkbox + .checkbox-label::before,
+#dialogs .checkbox + .checkbox-label::before {
+  border-color: var(--ui-dialog-border);
+  border-radius: 3px;
+  background: var(--bg-fields);
+  color: var(--text-dialogs);
+}
+
+#dialogs .states,
+#dialogs .states:hover,
+#dialogs .states.hovered {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#dialogs .states:hover,
+#dialogs .states.hovered,
+#dialogs .states:focus-within {
+  background: color-mix(in srgb, var(--text-dialogs) 6%, transparent);
+}
+
+#dialogs .states.selected,
+#dialogs .states.active {
+  background: color-mix(in srgb, var(--text-dialogs) 10%, transparent);
+  border-color: transparent;
+}
+
+#dialogs .states input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+#dialogs .states select {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 3px;
+}
+
+#dialogs .states input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+#dialogs .states select:focus {
+  background: var(--bg-fields);
+}
+
+#dialogs .editorDialog .header {
+  border-bottom-color: var(--ui-dialog-border);
+}
+
+/* Shared control surfaces; native values, events and keyboard interaction remain intact. */
+#options select,
+#dialogs select {
+  font-family: var(--sans-serif);
+  padding-inline: 6px;
+  min-width: 0;
+}
+
+@supports (appearance: base-select) {
+  #options select:not([multiple]):not([size]),
+  #dialogs select:not([multiple]):not([size]),
+  #options select:not([multiple]):not([size])::picker(select),
+  #dialogs select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+
+  #options select:not([multiple]):not([size]),
+  #dialogs select:not([multiple]):not([size]) {
+    align-items: center;
+    min-height: 0;
+    gap: 4px;
+    padding-block: 0;
+    line-height: normal;
+  }
+
+  #options select::picker(select),
+  #dialogs select::picker(select) {
+    background: var(--bg-fields);
+    color: var(--text-dialogs);
+    border: 1px solid var(--ui-dialog-border);
+    border-radius: 8px;
+    box-shadow: var(--ui-window-shadow);
+    padding: 4px;
+    margin-block: 5px;
+    max-height: min(340px, 60vh);
+    max-width: calc(100vw - 24px);
+    overflow: auto;
+    font-family: var(--sans-serif);
+    scrollbar-width: thin;
+  }
+
+  #options select::picker-icon,
+  #dialogs select::picker-icon {
+    opacity: 0.6;
+    font-size: 0.8em;
+    margin-inline-start: 4px;
+  }
+
+  #options select:open::picker-icon,
+  #dialogs select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  #options select:not([multiple]):not([size]) option,
+  #dialogs select:not([multiple]):not([size]) option {
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 4px;
+    line-height: 1.3;
+    font-family: var(--sans-serif);
+    font-weight: 400;
+    white-space: normal;
+    outline-offset: -2px;
+  }
+
+  #options select:not(#styleSelectFont) option,
+  #dialogs select option {
+    font-size: max(12px, 1em);
+  }
+
+  #options select option:checked,
+  #dialogs select option:checked {
+    background: color-mix(in srgb, var(--text-dialogs) 12%, var(--bg-fields));
+  }
+
+  #options select option:hover,
+  #options select option:focus-visible,
+  #dialogs select option:hover,
+  #dialogs select option:focus-visible {
+    background: color-mix(in srgb, var(--text-dialogs) 8%, var(--bg-fields));
+  }
+
+  #options select option::checkmark,
+  #dialogs select option::checkmark {
+    color: var(--text-dialogs);
+    opacity: 0.7;
+    font-size: 0.85em;
+  }
+}
+
+#options,
+#fileToolbar {
+  --control-color: var(--ui-accent);
+  --control-ink: var(--text-light);
+}
+
+#dialogs {
+  --control-color: var(--ui-dialog-accent);
+  --control-ink: var(--text-dialogs);
+}
+
+input[type="range"],
+#options input[type="range"],
+#dialogs input[type="range"] {
+  appearance: none;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track,
+#options input[type="range"]::-webkit-slider-runnable-track,
+#dialogs input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border: 0;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--control-color) 45%, transparent);
+}
+
+input[type="range"]::-moz-range-track,
+#options input[type="range"]::-moz-range-track,
+#dialogs input[type="range"]::-moz-range-track {
+  height: 3px;
+  border: 0;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--control-color) 45%, transparent);
+}
+
+input[type="range"]::-webkit-slider-thumb,
+#options input[type="range"]::-webkit-slider-thumb,
+#dialogs input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--control-color);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  cursor: grab;
+}
+
+input[type="range"]::-moz-range-thumb,
+#options input[type="range"]::-moz-range-thumb,
+#dialogs input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--control-color);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  cursor: grab;
+}
+
+input[type="range"]:disabled,
+#options input[type="range"]:disabled,
+#dialogs input[type="range"]:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#coastSliders slider-input input[type="number"] {
+  border-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Native scrollbars must use the standards property as well as the WebKit fallback. */
+#options,
+#options *,
+#dialogs,
+#dialogs *,
+#fileToolbar,
+#fileToolbar * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-color) transparent;
+}
+
+#options ::-webkit-scrollbar,
+#dialogs ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+#options ::-webkit-scrollbar-thumb,
+#dialogs ::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: var(--control-color);
+}
+
+#options ::-webkit-scrollbar-thumb:hover,
+#dialogs ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--control-color) 80%, var(--control-ink));
+}
+
+#options ::-webkit-scrollbar-button,
+#dialogs ::-webkit-scrollbar-button {
+  display: none;
+}
+
+#options ::-webkit-scrollbar-corner,
+#dialogs ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.ui-slider,
+div.slider.ui-slider {
+  height: 4px;
+  border: 0;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--control-color) 45%, transparent);
+}
+
+.ui-slider .ui-slider-range {
+  border-radius: inherit;
+  background: var(--control-color);
+}
+
+.ui-slider .ui-slider-handle {
+  width: 12px;
+  height: 12px;
+  top: -4px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--control-color);
+  color: var(--control-ink);
+  cursor: grab;
+}
+
+div.slider .ui-slider-handle {
+  border-radius: var(--ui-control-radius);
+}
+
+#riverBrushPreview {
+  fill: none;
+  stroke: var(--ui-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Explicit control rules override legacy monospace/widget defaults, not icon pseudo-elements. */
+#options input,
+#options select,
+#options button,
+#dialogs input,
+#dialogs select,
+#dialogs button,
+#dialogs textarea,
+#options select:not([multiple]):not([size]) option,
+#dialogs select:not([multiple]):not([size]) option,
+#options select::picker(select),
+#dialogs select::picker(select) {
+  font-family: var(--ui-font);
+}
+
+#interfaceFontUpload {
+  padding: 0;
+  width: 1.4em;
+  height: 1.4em;
+}
+
+@supports (appearance: base-select) {
+  #optionsContent select > button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    box-shadow: none;
+  }
+
+  #optionsContent selectedcontent {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: start;
+  }
+
+  #optionsContent select::picker-icon {
+    flex-shrink: 0;
   }
 }

@@ -6,7 +6,8 @@ import { heightmapTemplates } from "@/data/heightmap-templates";
 import { precreatedHeightmaps } from "@/data/precreated-heightmaps";
 import { drawHeights } from "@/renderers/draw-heightmap";
 import type { GridGraph } from "@/types/GridGraph";
-import { ensureEl, generateSeed } from "../utils";
+import { parseColorRamp } from "@/utils/heightmap-colors";
+import { ensureEl, escapeHtml, generateSeed } from "../utils";
 
 const initialSeed = generateSeed();
 type GraphConfig = ReturnType<typeof getGraphConfig>;
@@ -185,7 +186,10 @@ function insertHtml(): void {
   if (!previewGraph || !previewConfig) return;
 
   const heightmapColorSchemeOptions = Object.keys(heightmapColorSchemes)
-    .map(scheme => `<option value="${scheme}">${scheme}</option>`)
+    .map(
+      scheme =>
+        `<option value="${escapeHtml(scheme)}">${escapeHtml(parseColorRamp(scheme)?.name || (parseColorRamp(scheme) ? "Custom palette" : scheme))}</option>`
+    )
     .join("");
 
   const heightmapSelectionHtml = /* html */ `<div id="heightmapSelection" class="dialog stable">

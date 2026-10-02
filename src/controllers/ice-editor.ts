@@ -4,6 +4,7 @@ import { Layers } from "@/components/layers";
 import { clearMainTip, tip } from "@/components/tooltips";
 import { applyDefaultViewboxEvents } from "@/components/viewbox-events";
 import { redrawIceberg } from "@/renderers/draw-ice";
+import { redrawRelief } from "@/renderers/draw-relief-icons";
 import { ensureEl, getPointer, parseTransform } from "../utils";
 
 let selectedIce: Selection<SVGElement, unknown, HTMLElement, unknown>;
@@ -129,7 +130,10 @@ function dragElement(this: SVGElement, event: any): void {
 
     // Store offset for visual positioning; actual geometry stays in points
     const iceData = pack.ice.find(el => el.i === selectedId);
-    if (iceData) iceData.offset = [dx + x, dy + y];
+    if (iceData) {
+      iceData.offset = [dx + x, dy + y];
+      if (iceData.type === "glacier") redrawRelief();
+    }
   });
 }
 

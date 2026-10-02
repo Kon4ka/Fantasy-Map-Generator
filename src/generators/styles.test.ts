@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test, vi } from "vitest";
+import { encodeColorRamp, parseColorRamp } from "@/utils/heightmap-colors";
 import { Styles } from "./styles";
 import { stylesSchema } from "./styles-schema";
 
@@ -8,6 +9,21 @@ const cinderwood = readPreset("cinderwood");
 const ink = readPreset("ink");
 
 describe("stylesSchema", () => {
+  test("positioned ocean palettes survive map-style serialization without browser preferences", () => {
+    const source = {
+      name: "Sea",
+      interpolation: "smooth" as const,
+      stops: [
+        { position: 0.1, color: "#ffffff" },
+        { position: 0.7, color: "#002255" }
+      ]
+    };
+    const style = Styles.parse(Styles.defaults);
+    style.heightmap.oceanHeights.options.scheme = encodeColorRamp(source);
+    const restored = Styles.parse(JSON.parse(JSON.stringify(style)));
+    expect(parseColorRamp(restored.heightmap.oceanHeights.options.scheme)).toEqual(source);
+    expect(restored.heightmap.landHeights.options.scheme).toBe(style.heightmap.landHeights.options.scheme);
+  });
   test("the default styles are valid — defaults and schema cannot drift", () => {
     expect(stylesSchema.safeParse(Styles.defaults).success).toBe(true);
   });

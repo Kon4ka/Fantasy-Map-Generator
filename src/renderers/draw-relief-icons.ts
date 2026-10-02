@@ -1,6 +1,7 @@
 import { Layers } from "@/components/layers";
 import type { ReliefIcon } from "@/generators/relief-generator";
 import { Scene, ViewportLayers, type ViewportRenderContext } from "@/renderers/viewport/viewport-renderer";
+import { createGlacierReliefResolver } from "./glacier-relief";
 
 interface ReliefSceneIcon {
   id: string;
@@ -41,10 +42,12 @@ function reconcileRelief(context: ViewportRenderContext): void {
 
   const { x0, y0, x1, y1 } = context.bounds;
   const markup: string[] = [];
+  const resolveIcon = createGlacierReliefResolver(Layers.isOn("ice") ? (pack.ice ?? []) : []);
 
   for (const { id, data } of scene.values()) {
-    const { icon, x, y, s } = data;
+    const { x, y, s } = data;
     if (x > x1 || y > y1 || x + s < x0 || y + s < y0) continue;
+    const icon = resolveIcon(data);
     markup.push(`<use href="#${icon}" data-id="${id}" x="${x}" y="${y}" width="${s}" height="${s}"/>`);
   }
 

@@ -4,6 +4,8 @@ import { changeViewMode } from "@/components/options/view-mode";
 import { clearMainTip } from "@/components/tooltips";
 import { resetZoom } from "@/components/zoom";
 import { Controllers } from "@/controllers";
+import { Services } from "@/services";
+import { MapFiles } from "@/services/io/map-file";
 import { ARROW_TIP_KEY } from "@/services/versioning";
 import { ensureEl, findEl } from "@/utils/nodeUtils";
 
@@ -106,10 +108,42 @@ function initialize(): void {
     ensureEl(id).addEventListener("input", onPanelInput);
   }
 
-  ensureEl("sticked").addEventListener("click", event => {
-    const id = (event.target as HTMLElement).id;
+  const toolbar = ensureEl("fileToolbar");
+  const drawer = ensureEl("sticked");
+  const drawerToggle = ensureEl("fileToolbarToggle");
+  const setDrawer = (open: boolean) => {
+    toolbar.classList.toggle("open", open);
+    drawerToggle.setAttribute("aria-expanded", String(open));
+    drawer.inert = !open;
+  };
+  drawerToggle.addEventListener("click", () => setDrawer(!toolbar.classList.contains("open")));
+  document.addEventListener("pointerdown", event => {
+    if (!toolbar.contains(event.target as Node)) setDrawer(false);
+  });
+  toolbar.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    setDrawer(false);
+    drawerToggle.focus();
+    event.stopPropagation();
+  });
+  toolbar.addEventListener("keyup", event => {
+    if (event.key === "Escape") event.stopPropagation();
+  });
+  const updateFileName = () => {
+    const caption = ensureEl("currentMapFile");
+    caption.textContent = MapFiles.name || options.map.lore.name;
+    caption.title = caption.textContent;
+  };
+  window.addEventListener("map:generated", updateFileName);
+  window.addEventListener("map:file-saved", updateFileName);
+  drawer.addEventListener("click", event => {
+    const id = (event.target as Element).closest("button")?.id;
+    if (!id) return;
+    setDrawer(false);
     if (id === "newMapButton") regeneratePrompt();
-    else if (id === "saveButton") showSavePane();
+    else if (id === "saveButton") void Services.Save.toMachine();
+    else if (id === "saveAsButton") void Services.Save.toMachineAs();
+    else if (id === "saveMoreButton") showSavePane();
     else if (id === "exportButton") showExportPane();
     else if (id === "loadButton") void showLoadPane();
     else if (id === "zoomReset") resetZoom(1000);

@@ -43,7 +43,7 @@ const lake = z.strictObject({
 const heights = z.strictObject({
   attrs: z.strictObject({ opacity, filter, mask }),
   options: z.strictObject({
-    scheme: z.string(),
+    scheme: z.string(), // built-in name, legacy comma colors, or self-contained ramp JSON
     terracing: z.number(),
     skip: z.number(),
     relax: z.number(),

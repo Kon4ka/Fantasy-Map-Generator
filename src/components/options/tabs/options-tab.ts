@@ -1,6 +1,6 @@
 import { hsl, select } from "d3";
 import { applyZoomExtent, fitMapToScreen, setViewport } from "@/components/canvas";
-import { DEFAULT_THEME_COLOR } from "@/components/options-model";
+import { DEFAULT_DIALOG_COLOR, DEFAULT_THEME_COLOR } from "@/components/options-model";
 import type { OptionsData } from "@/components/options-schema";
 import {
   applyPerformancePreset,
@@ -22,7 +22,13 @@ import { CULTURE_SETS, Cultures } from "@/generators/cultures-generator";
 import { Emblems } from "@/generators/emblems-generator";
 import { EmblemRenderer } from "@/renderers/emblems/renderer";
 import { toggleAssistant } from "@/services/assistant";
-import { getLocale, setLocale } from "@/services/localization";
+import {
+  applyInterfaceFont,
+  INTERFACE_FONTS,
+  importInterfaceFont,
+  listInterfaceFonts
+} from "@/services/interface-fonts";
+import { getLocale, setLocale, translate } from "@/services/localization";
 import { copyMapURL } from "@/services/url-params";
 import { applyOption, ensureEl } from "@/utils/nodeUtils";
 import { minmax, rn } from "@/utils/numberUtils";
@@ -174,6 +180,9 @@ const OPTION_BINDINGS: Record<string, OptionBinding> = {
   zoomExtentMax: { read: o => o.app.zoomExtent.max, update: changeZoomExtent, event: "change" },
   themeHue: { read: o => hsl(o.app.ui.themeColor).h, update: changeThemeHue },
   themeColor: { read: o => o.app.ui.themeColor, update: value => setTheme(value, options.app.ui.transparency) },
+  dialogColor: { read: o => o.app.ui.dialogColor, update: changeDialogColor },
+  controlColor: { read: o => getControlAccent(o, o.app.ui.dialogColor), update: changeControlColor },
+  interfaceFont: { read: o => o.app.ui.fontFamily, update: value => void changeInterfaceFont(value), event: "change" },
   transparency: { read: o => o.app.ui.transparency, update: value => setTheme(options.app.ui.themeColor, +value) }
 };
 
@@ -196,6 +205,7 @@ const TEMPLATE = /* html */ `
     Map settings (apply to new maps):
   </p>
   <table>
+    <colgroup><col style="width:3%" /><col style="width:40%" /><col style="width:51%" /><col style="width:6%" /></colgroup>
     <tr
       data-tip="Coordinate extent the next map is generated on. It is fixed for the life of that map and cannot be changed later - the Viewport size below is what you see it through. For full-globe maps use aspect ratio 2:1"
     >
@@ -368,6 +378,7 @@ const TEMPLATE = /* html */ `
     Interface settings:
   </p>
   <table>
+    <colgroup><col style="width:3%" /><col style="width:40%" /><col style="width:51%" /><col style="width:6%" /></colgroup>
     <tr
       data-tip="Set user interface size. Please note browser zoom also affects interface size (Ctrl + or Ctrl - to change)"
     >
@@ -375,6 +386,15 @@ const TEMPLATE = /* html */ `
       <td>Interface size</td>
       <td colspan="2">
         <slider-input id="uiSize" data-option="uiSize" min=".6" max="3" step=".1"></slider-input>
+      </td>
+    </tr>
+    <tr data-tip="Choose an interface font. Map labels are not affected">
+      <td><i id="interfaceFontRestore" class="icon-ccw" data-tip="Restore default interface font"></i></td>
+      <td>Interface font</td>
+      <td><select data-option="interfaceFont">${INTERFACE_FONTS.map(id => `<option value="${id}" ${id === "default" ? "" : 'translate="no"'}>${id === "default" ? "Default" : id}</option>`).join("")}</select></td>
+      <td>
+        <button id="interfaceFontUpload" class="icon-upload" data-tip="Upload a font file (TTF, OTF, WOFF, WOFF2), stored only in this browser" aria-label="Upload interface font"></button>
+        <input id="interfaceFontFile" type="file" accept=".ttf,.otf,.woff,.woff2" hidden />
       </td>
     </tr>
     <tr data-tip="Set tooltip size">
@@ -395,6 +415,16 @@ const TEMPLATE = /* html */ `
       <td>
         <input id="themeColorInput" data-option="themeColor" type="color" />
       </td>
+    </tr>
+    <tr data-tip="Set the background color of windows, fields and dropdown lists">
+      <td><i data-tip="Restore default window and field color" id="dialogColorRestore" class="icon-ccw"></i></td>
+      <td>Window and field color</td>
+      <td colspan="2"><input id="dialogColorInput" data-option="dialogColor" type="color" /></td>
+    </tr>
+    <tr data-tip="Set the color of sliders and scrollbars">
+      <td><i data-tip="Match sliders and scrollbars to the theme" id="controlColorRestore" class="icon-ccw"></i></td>
+      <td>Sliders and scrollbars</td>
+      <td colspan="2"><input id="controlColorInput" data-option="controlColor" type="color" /></td>
     </tr>
     <tr data-tip="Set dialog and tool windows transparency">
       <td></td>
@@ -642,6 +672,13 @@ const TEMPLATE = /* html */ `
 const pendingInputs = new WeakMap<HTMLElement, string>();
 
 ensureEl("optionsContent").innerHTML = TEMPLATE;
+// Explicit selected content can ellipsize without truncating the options in the open picker.
+for (const select of ensureEl("optionsContent").querySelectorAll("select")) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.append(document.createElement("selectedcontent"));
+  select.prepend(button);
+}
 addListeners();
 loadVoices();
 onPerformanceChange(() => syncOption("performancePreset")); // the preset follows the fields, wherever they change
@@ -656,6 +693,7 @@ function addListeners(): void {
   content.addEventListener("change", event => {
     const target = event.target as HTMLSelectElement;
     if (target.id === "interfaceLanguage") setLocale(target.value === "en" ? "en" : "ru");
+    if (target.id === "interfaceFontFile") void uploadInterfaceFont(target as unknown as HTMLInputElement);
   });
 
   content.addEventListener("click", event => {
@@ -670,7 +708,66 @@ function addListeners(): void {
     else if (target.id === "openPerformanceSettings") PerformanceSettings.open();
     else if (target.id === "speakerTest") testSpeaker();
     else if (target.id === "themeColorRestore") restoreDefaultThemeColor();
+    else if (target.id === "dialogColorRestore") changeDialogColor(DEFAULT_DIALOG_COLOR);
+    else if (target.id === "controlColorRestore") changeControlColor(null);
+    else if (target.id === "interfaceFontRestore") void changeInterfaceFont("default");
+    else if (target.id === "interfaceFontUpload") ensureEl<HTMLInputElement>("interfaceFontFile").click();
   });
+}
+
+async function changeInterfaceFont(id: string): Promise<void> {
+  try {
+    if (!(await applyInterfaceFont(id))) return;
+    Options.set(o => {
+      o.app.ui.fontFamily = id;
+    });
+    Options.persist(); // This discrete, asynchronous choice must survive an immediate reload.
+    syncOption("interfaceFont");
+  } catch (error) {
+    syncOption("interfaceFont");
+    tip(translate((error as Error).message), true, "error", 6000);
+  }
+}
+
+async function uploadInterfaceFont(input: HTMLInputElement): Promise<void> {
+  const file = input.files?.[0];
+  if (!file) return;
+  const button = ensureEl<HTMLButtonElement>("interfaceFontUpload");
+  button.disabled = true;
+  try {
+    const font = await importInterfaceFont(file);
+    const choice = new Option(font.name, font.id);
+    choice.setAttribute("translate", "no");
+    optionInput<HTMLSelectElement>("interfaceFont").add(choice);
+    await changeInterfaceFont(font.id);
+  } catch (error) {
+    tip(translate((error as Error).message), true, "error", 6000);
+  } finally {
+    input.value = "";
+    button.disabled = false;
+  }
+}
+
+async function restoreInterfaceFonts(): Promise<void> {
+  const id = options.app.ui.fontFamily;
+  // Apply first so delayed storage reads cannot undo a subsequent user choice.
+  void applyInterfaceFont(id).catch(error => {
+    if (options.app.ui.fontFamily !== id) return;
+    void applyInterfaceFont("default");
+    tip(translate(error.message), true, "error", 6000);
+  });
+  try {
+    const select = optionInput<HTMLSelectElement>("interfaceFont");
+    for (const font of await listInterfaceFonts()) {
+      if (Array.from(select.options).some(option => option.value === font.id)) continue;
+      const choice = new Option(font.name, font.id);
+      choice.setAttribute("translate", "no");
+      select.add(choice);
+    }
+    syncOption("interfaceFont");
+  } catch {
+    // Built-in fonts work even when browser storage is disabled.
+  }
 }
 
 function optionInputs<T extends HTMLElement = HTMLInputElement>(key: string): NodeListOf<T> {
@@ -689,6 +786,7 @@ function syncOption(key: string, source?: HTMLElement): void {
   for (const input of optionInputs(key)) {
     if (input === source) continue;
     input.value = String(value);
+    if (key === "interfaceFont" && !input.value) input.value = "default";
     pendingInputs.delete(input);
   }
 }
@@ -723,7 +821,9 @@ function syncCellsDensity(): void {
   const readout = ensureEl("options").querySelector<HTMLOutputElement>('[data-option-output="points"]');
   if (!readout) return;
   readout.value = `${cellsDesired / 1000}K`;
-  readout.style.color = cellsDensityColor(cellsDesired);
+  const { h, s, l } = hsl(options.app.ui.themeColor);
+  readout.style.color =
+    contrastingText(hsl(h, s - 0.02, l + 0.06).hex()) === "#ffffff" ? "#ffffff" : cellsDensityColor(cellsDesired);
 }
 
 /** Cap the cultures slider at what the selected set can give, and show the number that survived it */
@@ -903,10 +1003,24 @@ function changeThemeHue(hue: string): void {
   setTheme(hsl(+hue, s, l).hex(), options.app.ui.transparency);
 }
 
-/**
- * Derive the whole dialog palette from one colour and one transparency. This applies what the
- * object holds; `setTheme` is what puts it there
- */
+function changeDialogColor(color: string): void {
+  Options.set(o => (o.app.ui.dialogColor = color));
+  changeDialogsTheme(options.app.ui.themeColor, options.app.ui.transparency);
+}
+
+function changeControlColor(color: string | null): void {
+  Options.set(o => (o.app.ui.controlColor = color));
+  changeDialogsTheme(options.app.ui.themeColor, options.app.ui.transparency);
+}
+
+function getControlAccent(config: OptionsData, background: string): string {
+  if (config.app.ui.controlColor) return config.app.ui.controlColor;
+  const { h, s } = hsl(config.app.ui.themeColor);
+  const dark = contrastingText(background) === "#ffffff";
+  return hsl(h, Math.max(s || 0, 0.25), dark ? 0.68 : 0.36).hex();
+}
+
+/** Apply the stored header and surface palettes with independent text contrast. */
 function changeDialogsTheme(themeColor: string, transparency: number): void {
   optionInput("transparency").value = String(transparency);
   const alpha = (100 - transparency) / 100;
@@ -915,6 +1029,15 @@ function changeDialogsTheme(themeColor: string, transparency: number): void {
   const { h, s, l } = hsl(themeColor);
   optionInput("themeColor").value = themeColor;
   optionInput("themeHue").value = String(h);
+  const dialogColor = options.app.ui.dialogColor ?? DEFAULT_DIALOG_COLOR;
+  optionInput("dialogColor").value = dialogColor;
+  const dialogText = contrastingText(dialogColor);
+  const dialogIsDark = dialogText === "#ffffff";
+  const panelAccent = getControlAccent(options, hsl(h, s - 0.02, l + 0.06).hex());
+  const dialogAccent = getControlAccent(options, dialogColor);
+  optionInput("controlColor").value = dialogAccent;
+  const dialogHover = hsl(dialogColor);
+  dialogHover.l += dialogIsDark ? 0.06 : -0.06;
 
   const variables: [name: string, value: string][] = [
     ["--bg-opacity", String(alpha)],
@@ -926,7 +1049,14 @@ function changeDialogsTheme(themeColor: string, transparency: number): void {
     ["--header", hsl(h, s, l - 0.03, alphaReduced).toString()],
     ["--header-active", hsl(h, s, l - 0.09, alphaReduced).toString()],
     ["--bg-disabled", hsl(h, s - 0.04, l + 0.09).toString()],
-    ["--bg-dialogs", hsl(0, 0, 0.98, alpha).toString()],
+    ["--bg-dialogs", hsl(dialogColor).copy({ opacity: alpha }).toString()],
+    ["--bg-fields", dialogColor],
+    ["--bg-dialog-hover", dialogHover.hex()],
+    ["--text-dialogs", dialogText],
+    ["--text-dialog-muted", dialogIsDark ? "#cccccc" : "#666666"],
+    ["--dialog-color-scheme", dialogIsDark ? "dark" : "light"],
+    ["--ui-accent", panelAccent],
+    ["--ui-dialog-accent", dialogAccent],
     ["--text-main", contrastingText(themeColor)],
     ["--text-light", contrastingText(hsl(h, s - 0.02, l + 0.06).hex())],
     ["--text-header", contrastingText(hsl(h, s, l - 0.03).hex())],
@@ -934,6 +1064,7 @@ function changeDialogsTheme(themeColor: string, transparency: number): void {
     ["--text-disabled", contrastingText(hsl(h, s - 0.04, l + 0.09).hex())]
   ];
   for (const [name, value] of variables) document.documentElement.style.setProperty(name, value);
+  syncCellsDensity();
 }
 
 function contrastingText(background: string): string {
@@ -1067,6 +1198,7 @@ export function restoreUi(): void {
   changeUiSize(ui.size ?? defaultUiSize());
 
   changeDialogsTheme(ui.themeColor, ui.transparency);
+  void restoreInterfaceFonts();
   applyPerformanceSettings();
   applyZoomExtent();
 }

@@ -26,6 +26,13 @@ function set(data: StylesData): void {
 // attrs go onto the DOM by data-layer/data-group; options never do (renderers read the store)
 function write(...ids: StyleLayerId[]): void {
   for (const id of ids) {
+    if (id === "heightmap") {
+      const ocean = document.querySelector('[data-layer="oceanDepths"]');
+      if (ocean) {
+        writeNode(ocean, styles.heightmap.oceanHeights);
+        ocean.setAttribute("mask", "url(#water)");
+      }
+    }
     const root = document.querySelector(`[data-layer="${id}"]`);
     if (!root) continue;
     writeNode(root, styles[id]);
@@ -35,6 +42,7 @@ function write(...ids: StyleLayerId[]): void {
 function apply(...ids: StyleLayerId[]): void {
   write(...ids);
   Layers.draw(...ids.filter((id): id is StyleLayerId & LayerId => id !== "map"));
+  if (ids.includes("heightmap")) Layers.draw("oceanDepths");
 }
 
 function writeNode(el: Element, node: object): void {

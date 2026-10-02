@@ -81,6 +81,12 @@ describe("adoptLegacyOptions", () => {
 });
 
 describe("Options.restore, migrating", () => {
+  it("fills missing interface-font preferences and preserves stored choices", async () => {
+    seed({ "fmg-options": JSON.stringify({ app: { ui: { themeColor: "#111111" } } }) });
+    expect((await restore()).options.app.ui.fontFamily).toBe("default");
+    seed({ "fmg-options": JSON.stringify({ app: { ui: { fontFamily: "Verdana" } } }) });
+    expect((await restore()).options.app.ui.fontFamily).toBe("Verdana");
+  });
   it("adopts the preferences and the definition sets", async () => {
     seed({
       themeColor: "#3366aa",

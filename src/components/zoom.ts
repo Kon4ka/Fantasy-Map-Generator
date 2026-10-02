@@ -6,7 +6,20 @@ import { ensureEl, findEl } from "@/utils/nodeUtils";
 import { rn } from "@/utils/numberUtils";
 
 const DEFAULT_SCALE_EXTENT: [number, number] = [1, 20];
-const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent(DEFAULT_SCALE_EXTENT).interpolate(constrainedFlight);
+let mapBrushActive = false;
+const zoomBehavior = zoom<SVGSVGElement, unknown>()
+  .scaleExtent(DEFAULT_SCALE_EXTENT)
+  .interpolate(constrainedFlight)
+  .filter((event: MouseEvent) => {
+    if (event.ctrlKey && event.type !== "wheel") return false;
+    if (event.type === "wheel") return true;
+    return mapBrushActive ? event.button === 1 : !event.button;
+  });
+
+/** A drawing tool owns LMB while active; MMB still pans the map. */
+export function setMapBrushActive(active: boolean): void {
+  mapBrushActive = active;
+}
 
 export function applyZoomBehavior(): void {
   select<SVGSVGElement, unknown>("#map").call(zoomBehavior.on("zoom", onZoom).on("end", handleZoomEnd));

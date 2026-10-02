@@ -108,6 +108,10 @@ test("styleNodeFor resolves editor selections to live store nodes", () => {
   expect(styleNodeFor("lakes", "my_lakes")).toEqual({ node: styles.lakes.groups.my_lakes, layer: "lakes" });
   delete styles.lakes.groups.my_lakes;
   expect(styleNodeFor("terrs", "landHeights")).toEqual({ node: styles.heightmap.landHeights, layer: "heightmap" });
+  expect(styleNodeFor("oceanHeights", "oceanHeights")).toEqual({
+    node: styles.heightmap.oceanHeights,
+    layer: "heightmap"
+  });
   expect(styleNodeFor("labels", "capital")).toEqual({ node: styles.labels.groups.capital, layer: "labels" });
   expect(styleNodeFor("burgIcons", "town")).toEqual({
     node: styles.burgIcons.burgIcons.groups.town,

@@ -135,7 +135,7 @@ function renderDialog(): void {
     <div id="riversBottom" class="editorToolbar">
       <button id="riversOverviewRefresh" data-tip="Refresh the Editor" class="icon-cw"></button>
       <button id="addNewRiver" data-tip="Automatically add river starting from clicked cell. Hold Shift to add multiple" class="icon-plus"></button>
-      <button id="riverCreateNew" data-tip="Create a new river selecting river cells" class="icon-map-pin"></button>
+      <button id="riverCreateNew" data-tip="Draw a new river with the brush" class="icon-brush"></button>
       <button id="riversBasinHighlight" data-tip="Toggle basin highlight mode" class="icon-sitemap"></button>
       <button id="riversExport" data-tip="Save rivers-related data as a text file (.csv)" class="icon-download"></button>
       <button id="riversRemoveAll" data-tip="Remove all rivers" class="icon-trash"></button>

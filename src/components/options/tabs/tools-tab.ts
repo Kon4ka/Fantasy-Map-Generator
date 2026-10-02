@@ -107,6 +107,9 @@ const TEMPLATE = /* html */ `
     <button id="regenerateEmblems" data-tip="Click to regenerate all emblems">Emblems</button>
     <button id="regenerateGoods" data-tip="Click to regenerate bonus goods placement">Goods</button>
     <button id="regenerateIce" data-tip="Click to regenerate icebergs and glaciers">Ice</button>
+    <button id="regenerateOceanDepths" data-tip="Rebuild sea-floor depths without changing land, coastlines or lakes">
+      Ocean depths
+    </button>
     <button
       id="regenerateStateLabels"
       data-tip="Click to update state labels placement based on current borders"

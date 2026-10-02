@@ -18,6 +18,12 @@ export function applyGraphSize(): void {
   cover("#fogging", "rect");
   select("#deftemp").select("mask#fog > rect").attr("width", width).attr("height", height);
   select("#deftemp").select("mask#water > rect").attr("width", width).attr("height", height);
+  select("#water")
+    .attr("maskUnits", "userSpaceOnUse")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)
+    .attr("height", height);
 }
 
 /**

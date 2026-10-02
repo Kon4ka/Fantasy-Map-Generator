@@ -28,6 +28,7 @@ declare global {
 
 export const STORAGE_KEY = "fmg-options";
 export const DEFAULT_THEME_COLOR = "#997787";
+export const DEFAULT_DIALOG_COLOR = "#fafafa";
 const SAVE_DELAY = 500;
 
 const locale = () => (typeof navigator === "undefined" ? "" : navigator.language);
@@ -95,6 +96,9 @@ class OptionsModel {
           size: null,
           tooltipSize: 14,
           themeColor: DEFAULT_THEME_COLOR,
+          dialogColor: DEFAULT_DIALOG_COLOR,
+          controlColor: null,
+          fontFamily: "default",
           transparency: 5,
           assistant: "show",
           speakerVoice: ""

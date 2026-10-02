@@ -193,6 +193,7 @@ function renderDialog(): void {
 
     <div id="statesBottom" class="editorToolbar">
       <button id="statesEditorRefresh" data-tip="Refresh the Editor" class="icon-cw"></button>
+      <button id="statesRefitLabels" data-tip="Recalculate all state labels" aria-label="Recalculate all state labels" class="icon-arrows-cw">Refit labels</button>
       <button id="statesEditStyle" data-tip="Edit states style in Style Editor" class="icon-adjust"></button>
       <button id="statesLegend" data-tip="Toggle Legend box" class="icon-list-bullet"></button>
       <button id="statesPercentage" data-tip="Toggle percentage / absolute values views" class="icon-percent"></button>
@@ -211,11 +212,6 @@ function renderDialog(): void {
           <input id="adjustLabels" class="checkbox" type="checkbox" />
           <label for="adjustLabels" class="checkbox-label"><i>auto-change labels</i></label>
         </div>
-        <button
-          id="statesRefitLabels"
-          data-tip="Recalculate all state labels"
-          class="icon-arrows-cw"
-        ></button>
       </div>
 
       <button id="statesManually" data-tip="Manually re-assign states" class="icon-brush"></button>
@@ -1210,7 +1206,7 @@ function showStatesChart(): void {
 
 function openRegenerationMenu(): void {
   ensureEl("statesBottom")
-    .querySelectorAll<HTMLElement>(":scope > button")
+    .querySelectorAll<HTMLElement>(":scope > button:not(#statesRefitLabels)")
     .forEach(el => {
       el.style.display = "none";
     });
@@ -1260,7 +1256,9 @@ export function refitAllStateLabels(): void {
     delete state.label;
   }
 
-  pack.addedLabels = (pack.addedLabels || []).filter(({ label }) => !stateNames.has(normalizeLabelText(label.text)));
+  pack.addedLabels = (pack.addedLabels || []).filter(
+    ({ label, featureId }) => featureId !== undefined || !stateNames.has(normalizeLabelText(label.text))
+  );
   for (const group of options.map.labels.groups) if (group.type === "state") delete group.active;
 
   Layers.draw("labels");

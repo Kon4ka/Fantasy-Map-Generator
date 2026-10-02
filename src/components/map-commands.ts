@@ -19,6 +19,7 @@ import { tip } from "@/components/tooltips";
 import { changeMapZoom, resetZoom } from "@/components/zoom";
 import { Controllers } from "@/controllers";
 import { Emblems } from "@/generators/emblems-generator";
+import { regenerateOceanDepths } from "@/generators/ocean-depths-generator";
 import { Population } from "@/generators/population-generator";
 import { unfog } from "@/renderers/overlays/fogging";
 import { Services } from "@/services";
@@ -477,6 +478,18 @@ export const MAP_COMMANDS: MapCommand[] = [
     run: () => confirmRegeneration(regenerateIce)
   },
   {
+    id: "regenerateOceanDepths",
+    name: "Regenerate Ocean Depths",
+    aliases: "generate sea depth bathymetry seabed ocean floor",
+    run: () => {
+      if (customization) return tip("Please exit the customization mode first", false, "error");
+      confirmRegeneration(
+        regenerateSeaFloor,
+        "Regenerate ocean depths? This replaces manual sea-floor edits. Land, coastlines, lakes, rivers and countries will remain unchanged."
+      );
+    }
+  },
+  {
     id: "configRegenerateMarkers",
     name: "Configure Marker Generation",
     aliases: "markers settings",
@@ -651,7 +664,7 @@ function isQuestion(text: string): boolean {
   return query.includes("?") || QUESTION_START.test(query);
 }
 
-function confirmRegeneration(action: () => void): void {
+function confirmRegeneration(action: () => void, text?: string): void {
   const apply = () => {
     action();
     refreshEditors();
@@ -663,6 +676,7 @@ function confirmRegeneration(action: () => void): void {
 
   const message = ensureEl("alertMessage");
   message.innerHTML =
+    text ??
     "Regeneration will remove all the custom changes for the element.<br /><br />Are you sure you want to proceed?";
   $("#alert").dialog({
     resizable: false,
@@ -780,6 +794,12 @@ function regenerateMilitary(): void {
 function regenerateIce(): void {
   Ice.regenerate();
   Layers.draw("ice");
+}
+
+function regenerateSeaFloor(): void {
+  regenerateOceanDepths(grid, pack, crypto.randomUUID());
+  if (Layers.isOn("oceanDepths")) Layers.draw("oceanDepths");
+  else Layers.toggle("oceanDepths");
 }
 
 function regenerateMarkers(): void {
