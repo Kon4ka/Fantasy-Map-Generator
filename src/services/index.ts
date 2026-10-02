@@ -5,6 +5,7 @@ import "./autosave";
 import "./fonts";
 import "./url-params";
 import "./versioning";
+import "./agent/agent";
 
 export const Services = createRegistry({
   AppOffer: () => import("@/services/app-offer").then(m => m.AppOffer),

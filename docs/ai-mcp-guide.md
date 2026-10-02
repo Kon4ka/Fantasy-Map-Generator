@@ -1,4 +1,4 @@
-# Kontar Edition: инструкция для ИИ и план MCP
+# Инструкция для ИИ и план MCP
 
 Документ из двух частей. Часть 1 — правила работы ИИ с картой **сейчас**. Часть 2 — план MCP-сервера,
 через который ИИ создаёт и редактирует мир по запросам пользователя.
@@ -7,10 +7,10 @@
 
 ### Статус
 
-На 2026-10-02 **MCP-сервера нет**: нет команды запуска, транспорта и набора инструментов.
-Не выдавай доступ к файлам или автоматизацию браузера за MCP и не придумывай имена инструментов,
-адреса или команду `npm run mcp`. Когда сервер появится, сначала запроси его фактический список
-инструментов и схемы.
+С 2026-10-02 работает MCP-сервер `fantasy-map` этапов M0–M1 — **только чтение** открытой карты:
+`world_status`, `world_schema`, `world_query`, `world_get` (см. «Подключение» в части 2).
+Правки, генерация и сохранение через MCP ещё не реализованы — не обещай их и не придумывай
+инструменты сверх тех, что вернул `tools/list`.
 
 `window.kontarFiles` / `kontarFileOperation` — внутренний мост сохранения лаунчера (Playwright
 `exposeBinding`), **не MCP** и не HTTP API. Сервер Vite тоже не MCP.
@@ -103,10 +103,10 @@
 в страницу есть. Несохранённые правки пользователя при этом видны ИИ, а не теряются.
 
 ```
-Claude Code ──stdio──▶ kontar-mcp (Node, MCP SDK)
+Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
                           │ HTTP 127.0.0.1 + токен
                           ▼
-                       kontar-launch (Playwright) ──page.evaluate──▶ window.kontarAgent (в приложении)
+                       kontar-launch (Playwright) ──page.evaluate──▶ window.mapAgent (в приложении)
                           │                                            ├─ query/get  (pack, options, lore)
                           └─ headless-страница для офлайн-работы       ├─ apply      (каталог операций)
                              с выбранным .map                          ├─ generate   (MAP_COMMANDS, опции)
@@ -118,8 +118,8 @@ Claude Code ──stdio──▶ kontar-mcp (Node, MCP SDK)
 | Слой | Файл (план) | Задача |
 | --- | --- | --- |
 | Agent API в приложении | `src/services/agent/` | Типизированные операции над миром, валидация, перерисовка, снимки |
-| Мост лаунчера | `scripts/kontar-launch.mjs` + `scripts/kontar-agent-bridge.ts` | Локальный HTTP на 127.0.0.1 со случайным токеном; вызывает `kontarAgent` через `page.evaluate`; при необходимости открывает headless-страницу с `.map` |
-| MCP-сервер | `scripts/kontar-mcp.ts` | stdio, `@modelcontextprotocol/sdk`; 9 инструментов ниже; токен и порт читает из файла, который пишет лаунчер |
+| Мост лаунчера | `scripts/kontar-launch.mjs` + `scripts/map-agent-bridge.ts` | Локальный HTTP на 127.0.0.1 со случайным токеном; вызывает `mapAgent` через `page.evaluate`; при необходимости открывает headless-страницу с `.map` |
+| MCP-сервер | `scripts/map-mcp.ts` | stdio, `@modelcontextprotocol/sdk`; 9 инструментов ниже; токен и порт читает из файла, который пишет лаунчер |
 
 Если лаунчер не запущен, `world_status` честно сообщает об этом и предлагает режим `open` (headless).
 
@@ -188,7 +188,7 @@ Claude Code ──stdio──▶ kontar-mcp (Node, MCP SDK)
 
 | Этап | Содержание | Готово, когда |
 | --- | --- | --- |
-| M0. Прототип моста | `window.kontarAgent.status()`, HTTP-мост в лаунчере, MCP с `world_status` | Claude Code видит статус живой карты |
+| M0. Прототип моста | `window.mapAgent.status()`, HTTP-мост в лаунчере, MCP с `world_status` | Claude Code видит статус живой карты |
 | M1. Чтение | `world_schema`, `world_query`, `world_get` для всех типов; ресурсы с документацией | Запрос «какие государства на острове X» отвечает одной таблицей |
 | M2. Правка | `world_apply` (`set`, `create`, `remove`, `moveLabel`, `layer`, `style`, `lore`), ревизии, снимки, `world_undo` | Переименование + перекраска + новая метка — один вызов; откат работает |
 | M3. Территории и генерация | `assign`, `merge`, `split`; `world_generate` поверх `MAP_COMMANDS` и опций | Пересоздание рек/поселений и перекройка границ без ручного UI |
@@ -198,13 +198,21 @@ Claude Code ──stdio──▶ kontar-mcp (Node, MCP SDK)
 Тесты: юнит-тесты Agent API на сгенерированной карте (vitest), контрактные тесты MCP-инструментов
 (вход/выход по схемам), e2e на Playwright: `open → apply → save → load` и сравнение секций.
 
-### Подключение (после M0)
+### Подключение (реализовано: M0–M1)
 
-План конфигурации для Claude Code (`.mcp.json` в корне проекта):
+| Часть | Файл |
+| --- | --- |
+| Agent API в приложении | [src/services/agent/agent.ts](../src/services/agent/agent.ts), таблицы — [table.ts](../src/services/agent/table.ts) |
+| Мост лаунчера | [scripts/map-agent-bridge.ts](../scripts/map-agent-bridge.ts), стартует из `kontar-launch.mjs` после открытия карты |
+| MCP-сервер | [scripts/map-mcp.ts](../scripts/map-mcp.ts), без внешних зависимостей |
+| Конфигурация Claude Code | [.mcp.json](../.mcp.json) в корне проекта |
 
-```json
-{ "mcpServers": { "kontar": { "command": "node", "args": ["scripts/kontar-mcp.ts"] } } }
-```
+Порядок: запусти `scripts/kontar-launch.cmd` → лаунчер откроет карту и запишет адрес и токен моста
+в `%LOCALAPPDATA%/FantasyMapGenerator/agent.json` → Claude Code при открытии проекта предложит включить сервер
+`fantasy-map` из `.mcp.json`. Если лаунчер не запущен, инструменты отвечают ошибкой с этой подсказкой.
 
-После реализации заменить этот раздел проверенной командой запуска, реальными схемами
-инструментов и примером безопасного запроса.
+Пример: `world_query {type:"state", sort:"-area", limit:5}` →
+`{cols:["id","name","form","capital",…], rows:[[2,"Брамиш Империя","Monarchy",[2,"Реафорд"],…]], total:23, next:5}`.
+
+Замеры на живой карте (13 тыс. ячеек): описания 4 инструментов — 1,3 КБ, ответы 0,3–0,5 КБ, 8–60 мс.
+Тесты: `node --test scripts/map-mcp.test.ts` (сервер и мост), `npx vitest run src/services/agent`.

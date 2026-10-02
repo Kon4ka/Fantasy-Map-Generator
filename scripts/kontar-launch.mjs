@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
 import { createMapFileStore } from "./kontar-file-store.ts";
+import { startAgentBridge } from "./map-agent-bridge.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const appUrl = "http://127.0.0.1:5173/Fantasy-Map-Generator/";
@@ -138,6 +139,7 @@ const stopProcessTree = child => {
 
 let server;
 let context;
+let agentBridge;
 
 try {
   const mapPath = getLatestMapPath();
@@ -237,6 +239,7 @@ try {
     );
     await page.bringToFront();
     log("Карта Контара открыта");
+    if (!testRun) agentBridge = await startAgentBridge(page, path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json"), log);
 
     if (testRun) {
       await page.evaluate(() => {
@@ -286,11 +289,13 @@ try {
     }
 
     await new Promise(resolve => context.once("close", resolve));
+    agentBridge?.close();
     await Promise.allSettled([...pendingDownloads]);
     if (ownsServer) stopProcessTree(server);
   }
 } catch (error) {
   fail(error);
+  agentBridge?.close();
   if (context) await context.close().catch(() => {});
   stopProcessTree(server);
   process.exitCode = 1;

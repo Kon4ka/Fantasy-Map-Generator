@@ -1,0 +1,175 @@
+// Read API for the AI agent (MCP), reached by the launcher through page.evaluate. See docs/ai-mcp-guide.md
+import { Layers } from "@/components/layers";
+import { ENTITY_TYPES, type EntityRef, type EntityType, MapEntities } from "@/components/map-entities";
+import { compact, type Row, type TableQuery, toTable } from "@/services/agent/table";
+import { MapFiles } from "@/services/io/map-file";
+
+type QueryType = EntityType | "layer";
+
+// what a query shows when no fields are asked for
+const DEFAULT_FIELDS: Record<QueryType, string[]> = {
+  state: ["id", "name", "form", "capital", "culture", "cells", "area", "burgs"],
+  province: ["id", "name", "state", "burg", "cells", "area"],
+  burg: ["id", "name", "state", "culture", "population", "capital", "port"],
+  marker: ["id", "name", "type", "x", "y"],
+  river: ["id", "name", "type", "length", "discharge", "basin"],
+  route: ["id", "name", "group", "feature"],
+  feature: ["id", "name", "type", "group", "cells", "area"],
+  zone: ["id", "name", "type"],
+  journey: ["id", "name"],
+  market: ["id", "name"],
+  regiment: ["id", "name", "state"],
+  addedLabel: ["id", "name", "featureId", "x", "y"],
+  culture: ["id", "name", "type", "cells", "area"],
+  religion: ["id", "name", "type", "form", "culture", "cells", "area"],
+  biome: ["id", "name"],
+  good: ["id", "name"],
+  layer: ["id", "on"]
+};
+
+// numeric fields that point at another entity; shown as [id, name]
+const REFS: Partial<Record<EntityType, Record<string, EntityType>>> = {
+  state: { capital: "burg", culture: "culture" },
+  province: { state: "state", burg: "burg" },
+  burg: { state: "state", culture: "culture", feature: "feature", market: "market" },
+  religion: { culture: "culture" },
+  river: { basin: "river", parent: "river" },
+  addedLabel: { featureId: "feature" },
+  regiment: { state: "state" }
+};
+
+const TERRITORY_CELLS: Partial<Record<EntityType, () => ArrayLike<number>>> = {
+  state: () => pack.cells.state,
+  province: () => pack.cells.province,
+  culture: () => pack.cells.culture,
+  religion: () => pack.cells.religion,
+  feature: () => pack.cells.f,
+  biome: () => pack.cells.biome
+};
+
+const NOTE_LIMIT = 2000;
+const stripHtml = (html: string) =>
+  html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const isPrimitive = (value: unknown) => ["number", "string", "boolean"].includes(typeof value);
+
+function assertType(type: unknown): asserts type is QueryType {
+  if (type === "layer" || ENTITY_TYPES.includes(type as EntityType)) return;
+  throw new Error(`unknown type "${type}"; types: ${[...ENTITY_TYPES, "layer"].join(", ")}`);
+}
+
+function toRow(type: EntityType, ref: EntityRef, entity: object, noteLimit = 0): Row {
+  const row: Row = { id: ref.sub === undefined ? ref.id : MapEntities.key(ref), name: MapEntities.getName(ref) };
+  const refs = REFS[type] ?? {};
+  for (const [key, value] of Object.entries(entity)) {
+    if (key === "i" || key === "name" || !isPrimitive(value)) continue;
+    if (key === "note") {
+      if (noteLimit) row.note = stripHtml(String(value)).slice(0, noteLimit);
+      else row.hasNote = true;
+      continue;
+    }
+    const target = refs[key];
+    row[key] = target && typeof value === "number" ? [value, MapEntities.getName({ type: target, id: value })] : value;
+  }
+  return row;
+}
+
+function rowsOf(type: QueryType): Row[] {
+  if (type === "layer") return Layers.all.map(layer => ({ id: layer.id, on: Layers.isOn(layer.id) }));
+  return MapEntities.collect(type).map(({ ref, entity }) => toRow(type, ref, entity));
+}
+
+function status() {
+  const counts = Object.fromEntries(ENTITY_TYPES.map(type => [type, MapEntities.collect(type).length]));
+  return {
+    map: options.map.lore.name,
+    file: MapFiles.name || null,
+    seed: options.map.seed ?? null,
+    size: [options.map.graph.width, options.map.graph.height],
+    cells: pack.cells?.i?.length ?? 0,
+    counts,
+    revision: revision(counts)
+  };
+}
+
+/** Changes whenever entities are added, removed or renamed. Cheap: names and counts only */
+function revision(counts: Record<string, number>): string {
+  let hash = 2166136261;
+  const text = JSON.stringify(counts) + pack.states.map(s => s.name).join() + pack.burgs.length;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  return (hash >>> 0).toString(36);
+}
+
+function schema(args: { type?: string } = {}) {
+  if (!args.type) {
+    return {
+      types: [...ENTITY_TYPES, "layer"],
+      pseudo: { lore: "world_get type=lore: name, description, calendar" },
+      where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
+      methods: ["status", "schema", "query", "get"]
+    };
+  }
+  assertType(args.type);
+  const sample = rowsOf(args.type)[0] ?? {};
+  return {
+    type: args.type,
+    defaults: DEFAULT_FIELDS[args.type],
+    fields: Object.fromEntries(
+      Object.entries(sample).map(([key, value]) => [key, Array.isArray(value) ? "ref" : typeof value])
+    ),
+    refs: REFS[args.type as EntityType] ?? {},
+    include: ["position", "context", "cellCount", "note"]
+  };
+}
+
+function query(args: { type?: string } & TableQuery) {
+  assertType(args.type);
+  return toTable(rowsOf(args.type), args, DEFAULT_FIELDS[args.type]);
+}
+
+function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]; include?: string[] }) {
+  if (args.type === "lore") return compact(structuredClone(options.map.lore));
+  assertType(args.type);
+  const type = args.type;
+  if (type === "layer") return rowsOf(type).filter(row => args.ids?.includes(row.id as string));
+
+  const include = new Set(args.include ?? ["note"]);
+  return (args.ids ?? []).slice(0, 50).map(id => {
+    const ref = typeof id === "string" ? MapEntities.parseKey(id) : { type, id };
+    const entity = ref && MapEntities.get(ref);
+    if (!ref || !entity) return { id, error: "not found" };
+
+    const row = toRow(type, ref, entity, include.has("note") ? NOTE_LIMIT : 0);
+    if (include.has("position")) row.position = compact(MapEntities.getPosition(ref) ?? null);
+    if (include.has("context")) row.context = MapEntities.getContext(ref);
+    const cells = include.has("cellCount") ? TERRITORY_CELLS[type]?.() : undefined;
+    if (cells) row.cellCount = Array.prototype.filter.call(cells, value => value === ref.id).length;
+    if (!args.fields?.length) return compact(row);
+    return Object.fromEntries(["id", ...args.fields].map(field => [field, compact(row[field]) ?? null]));
+  });
+}
+
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get };
+
+/** Single entry point: never throws, so the bridge always gets JSON back */
+function call(method: string, args: Record<string, unknown> = {}): unknown {
+  try {
+    if (!pack?.cells?.i) return { error: "no map is loaded yet" };
+    const handler = METHODS[method];
+    if (!handler) return { error: `unknown method "${method}"; methods: ${Object.keys(METHODS).join(", ")}` };
+    return handler(args as never);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export const MapAgent = { call };
+
+declare global {
+  interface Window {
+    mapAgent: typeof MapAgent;
+  }
+}
+window.mapAgent = MapAgent;
