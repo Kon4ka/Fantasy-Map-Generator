@@ -1,8 +1,11 @@
 // Agent API for AI tools (MCP), reached by the launcher through page.evaluate. See docs/ai-mcp-guide.md
+
+import { refreshEditors } from "@/components/dialog/dialog-helpers";
 import { Layers } from "@/components/layers";
 import { ENTITY_TYPES, type EntityRef, type EntityType, MapEntities } from "@/components/map-entities";
 import { execute, OPERATIONS, plan } from "@/services/agent/apply";
 import { compact, type Row, type TableQuery, toTable } from "@/services/agent/table";
+import { loadPainters } from "@/services/agent/territory";
 import { MapFiles } from "@/services/io/map-file";
 
 type QueryType = EntityType | "layer";
@@ -119,11 +122,13 @@ function revision(): string {
   return (hash >>> 0).toString(36);
 }
 
-// map serializations taken before each applied batch, newest last; with the revision the batch produced
-const snapshots: { data: string; after: string }[] = [];
+// map serializations taken before each change, newest last; with the revision it produced and, for a
+// new map, the way back to the file the old map came from
+const snapshots: { data: string; after: string; file?: () => void }[] = [];
 const MAX_SNAPSHOTS = 5;
 
 async function apply(args: { ops?: unknown; dryRun?: boolean; expectRevision?: string }) {
+  await loadPainters();
   const planned = plan(args.ops);
   const current = revision();
   const changes = planned.map(step => step.summary);
@@ -132,18 +137,72 @@ async function apply(args: { ops?: unknown; dryRun?: boolean; expectRevision?: s
     return { error: `revision is ${current}, expected ${args.expectRevision}: the map changed; re-read, then retry` };
   }
 
-  const { Save } = await import("@/services/io/save");
-  const data = Save.prepareMapData();
+  const data = await serialize();
   try {
     execute(planned);
   } catch (error) {
     await restore(data);
     return { error: `edit failed and was rolled back: ${(error as Error).message}` };
   }
-  const after = revision();
-  snapshots.push({ data, after });
-  if (snapshots.length > MAX_SNAPSHOTS) snapshots.shift();
+  const after = remember(data);
   return { applied: changes.length, changes, revision: after };
+}
+
+const serialize = async () => (await import("@/services/io/save")).Save.prepareMapData();
+
+function remember(data: string, file?: () => void): string {
+  const after = revision();
+  snapshots.push({ data, after, file });
+  if (snapshots.length > MAX_SNAPSHOTS) snapshots.shift();
+  return after;
+}
+
+const waitFor = async (done: () => boolean, timeout: number) => {
+  for (const end = Date.now() + timeout; !done(); ) {
+    if (Date.now() > end) throw new Error("timed out");
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+};
+
+/** Regenerate one part of the world, or the whole map (scope "map") */
+async function generate(args: {
+  scope?: string;
+  seed?: string;
+  width?: number;
+  height?: number;
+  dryRun?: boolean;
+  expectRevision?: string;
+}) {
+  const { REGENERATORS } = await import("@/components/map-commands");
+  const scope = args.scope ?? "";
+  const isMap = scope === "map";
+  if (!isMap && !REGENERATORS[scope]) {
+    return { error: `scope must be "map" or one of: ${Object.keys(REGENERATORS).join(", ")}` };
+  }
+  const change = isMap
+    ? `replace the whole map with a new one${args.seed ? ` (seed ${args.seed})` : ""}; Save will ask for a new file`
+    : `regenerate ${scope}; manual changes to it are lost`;
+  const current = revision();
+  if (args.dryRun !== false) return { dryRun: true, changes: [change], revision: current };
+  if (args.expectRevision !== current) {
+    return { error: `revision is ${current}, expected ${args.expectRevision}: the map changed; re-read, then retry` };
+  }
+
+  const data = await serialize();
+  let file: (() => void) | undefined;
+  if (isMap) {
+    const { regenerateMap } = await import("@/components/lifecycle");
+    file = MapFiles.preserve();
+    const count = mapHistory.length;
+    regenerateMap({ seed: args.seed, width: args.width, height: args.height });
+    await waitFor(() => mapHistory.length > count, 180_000);
+    MapFiles.clear(); // Save must not overwrite the old world's file with the new one
+    window.dispatchEvent(new Event("map:file-saved"));
+  } else {
+    REGENERATORS[scope]();
+    refreshEditors();
+  }
+  return { done: change, revision: remember(data, file), undo: snapshots.length };
 }
 
 async function undo(args: { steps?: number; force?: boolean }) {
@@ -156,6 +215,10 @@ async function undo(args: { steps?: number; force?: boolean }) {
   }
   const target = snapshots.splice(snapshots.length - steps, steps)[0];
   await restore(target.data);
+  if (target.file) {
+    target.file();
+    window.dispatchEvent(new Event("map:file-saved"));
+  }
   return { undone: steps, revision: revision(), undo: snapshots.length };
 }
 
@@ -170,7 +233,7 @@ function schema(args: { type?: string } = {}) {
       types: [...ENTITY_TYPES, "layer"],
       pseudo: { lore: "world_get type=lore: name, description, calendar" },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
-      methods: ["status", "schema", "query", "get", "apply", "undo"],
+      methods: ["status", "schema", "query", "get", "apply", "undo", "generate"],
       ops: OPERATIONS
     };
   }
@@ -214,7 +277,7 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo };
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate };
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
 async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {

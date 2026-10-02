@@ -943,7 +943,7 @@ function openPaintEditor(): void {
   });
 }
 
-function applyCulturePaint(changes: ReadonlyMap<number, number>): void {
+export function applyCulturePaint(changes: ReadonlyMap<number, number>): void {
   for (const [cell, culture] of changes) {
     pack.cells.culture[cell] = culture;
     if (pack.cells.burg[cell]) pack.burgs[pack.cells.burg[cell]].culture = culture;

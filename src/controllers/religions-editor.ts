@@ -859,7 +859,7 @@ function openPaintEditor(): void {
   });
 }
 
-function applyReligionPaint(changes: ReadonlyMap<number, number>): void {
+export function applyReligionPaint(changes: ReadonlyMap<number, number>): void {
   for (const [cell, religion] of changes) pack.cells.religion[cell] = religion;
   if (changes.size) {
     Layers.draw("religions");

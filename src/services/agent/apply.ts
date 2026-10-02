@@ -3,6 +3,7 @@ import { refreshEditors } from "@/components/dialog/dialog-helpers";
 import { type LayerId, Layers } from "@/components/layers";
 import { ENTITY_TYPES, type EntityRef, type EntityType, MapEntities } from "@/components/map-entities";
 import { Notes } from "@/components/notes";
+import { assertTerritory, type CellSelector, changesFor, painter, selectCells } from "@/services/agent/territory";
 
 export type Op = { op: string; type?: string; id?: number | string } & Record<string, unknown>;
 
@@ -210,7 +211,46 @@ function planLore(op: Op): Planned[] {
     });
 }
 
+/** Give the selected land cells to a territory: {type, id, cells: selector} */
+function planAssign(op: Op): Planned[] {
+  assertTerritory(op.type, op.id);
+  const type = op.type;
+  const id = op.id as number;
+  if (typeof op.cells !== "object" || op.cells === null)
+    fail("assign needs cells: {feature | of | circle | polygon | cells}");
+  const changes = changesFor(type, id, selectCells(op.cells as CellSelector));
+  if (!changes.size) return [];
+  const name = MapEntities.getName({ type, id }) || "none";
+  return [
+    {
+      summary: `assign ${changes.size} cells to ${type} ${id} ${name}`,
+      layers: [],
+      run: () => painter(type)(changes)
+    }
+  ];
+}
+
+/** Fold states into one: {type: "state", id: keep, ids: [absorbed…]}; the absorbed ones are removed */
+function planMerge(op: Op): Planned[] {
+  if (op.type !== "state") fail("merge supports states");
+  assertTerritory("state", op.id, false);
+  if (!Array.isArray(op.ids) || !op.ids.length) fail("merge needs ids of the states to absorb");
+  const id = op.id as number;
+  return (op.ids as number[]).map(absorbed => {
+    assertTerritory("state", absorbed, false);
+    if (absorbed === id) fail("a state cannot absorb itself");
+    const changes = changesFor("state", id, selectCells({ of: { type: "state", id: absorbed } }));
+    return {
+      summary: `merge state ${absorbed} ${MapEntities.getName({ type: "state", id: absorbed })} into ${id} (${changes.size} cells); ${absorbed} is removed`,
+      layers: [],
+      run: () => painter("state")(changes)
+    };
+  });
+}
+
 const PLANNERS: Record<string, (op: Op) => Planned[]> = {
+  assign: planAssign,
+  merge: planMerge,
   set: planSet,
   create: planCreate,
   remove: planRemove,

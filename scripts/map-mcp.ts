@@ -71,13 +71,31 @@ const TOOLS = [
         ops: {
           type: "array",
           description:
-            "set {type,id,field:value…} | create {type:marker|addedLabel,x,y,name|text,markerType?,icon?,note?} | remove {type:marker|addedLabel,id} | layer {id,on} | lore {name?,description?,year?,era?}. Fields per type: world_schema",
+            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | merge {type:state,id,ids} | create {type:marker|addedLabel,x,y,name|text,markerType?,icon?,note?} | remove {type:marker|addedLabel,id} | layer {id,on} | lore {name?,description?,year?,era?}. Fields per type: world_schema",
           items: { type: "object" }
         },
         dryRun: { type: "boolean" },
         expectRevision: { type: "string" }
       },
       required: ["ops"]
+    }
+  },
+  {
+    name: "world_generate",
+    method: "generate",
+    description:
+      "Regenerate a part (rivers, burgs, states, cultures…; wrong scope lists them) or scope:map for a new map. Preview first, like world_apply.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string" },
+        seed: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+        dryRun: { type: "boolean" },
+        expectRevision: { type: "string" }
+      },
+      required: ["scope"]
     }
   },
   {

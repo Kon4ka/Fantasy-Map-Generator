@@ -704,6 +704,30 @@ function confirmRegeneration(action: () => void, text?: string): void {
   });
 }
 
+/** Regeneration actions without the confirmation dialog, for the AI agent */
+export const REGENERATORS: Record<string, () => void> = {
+  states: regenerateStates,
+  provinces: regenerateProvinces,
+  burgs: regenerateBurgs,
+  cultures: regenerateCultures,
+  religions: regenerateReligions,
+  rivers: regenerateRivers,
+  routes: regenerateRoutes,
+  stateLabels: regenerateStateLabels,
+  relief: regenerateReliefIcons,
+  emblems: regenerateEmblems,
+  markers: regenerateMarkers,
+  zones: () => regenerateZones(),
+  military: regenerateMilitary,
+  population: regeneratePopulation,
+  goods: regenerateGoods,
+  markets: regenerateMarkets,
+  production: regenerateProduction,
+  economy: regenerateEconomy,
+  ice: regenerateIce,
+  oceanDepths: regenerateSeaFloor
+};
+
 function regenerateStateLabels(): void {
   for (const state of pack.states) {
     if (!state.i || state.removed) continue;

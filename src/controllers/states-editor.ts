@@ -1296,7 +1296,7 @@ function openPaintEditor(): void {
   });
 }
 
-function applyStatesPaint(changes: ReadonlyMap<number, number>, adjustLabels: boolean): void {
+export function applyStatesPaint(changes: ReadonlyMap<number, number>, adjustLabels: boolean, notify = true): void {
   const { cells } = pack;
   const affectedStates: number[] = [];
   const affectedProvinces: number[] = [];
@@ -1335,7 +1335,7 @@ function applyStatesPaint(changes: ReadonlyMap<number, number>, adjustLabels: bo
     }
 
     if (document.getElementById(dialogId)) refreshStatesEditor();
-    if (removedStates.length) {
+    if (notify && removedStates.length) {
       window.setTimeout(
         () =>
           alertDialog({

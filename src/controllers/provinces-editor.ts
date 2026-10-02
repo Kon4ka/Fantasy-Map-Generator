@@ -1112,7 +1112,7 @@ function openPaintEditor(): void {
   });
 }
 
-function applyProvincePaint(changes: ReadonlyMap<number, number>): void {
+export function applyProvincePaint(changes: ReadonlyMap<number, number>): void {
   for (const [cell, province] of changes) pack.cells.province[cell] = province;
 
   Provinces.getPoles();

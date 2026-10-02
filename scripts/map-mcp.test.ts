@@ -24,7 +24,7 @@ test("tools/list hides the bridge method names", async () => {
   const tools = (answer?.result as { tools: Record<string, unknown>[] }).tools;
   assert.deepEqual(
     tools.map(tool => tool.name),
-    ["world_status", "world_schema", "world_query", "world_get", "world_apply", "world_undo"]
+    ["world_status", "world_schema", "world_query", "world_get", "world_apply", "world_generate", "world_undo"]
   );
   assert.ok(tools.every(tool => !("method" in tool)));
 });
