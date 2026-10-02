@@ -277,8 +277,14 @@ async function parseLoadedData(data: string[], mapVersion: string | null, file?:
     }
 
     undraw(); // every layer releases its scene and content before the loaded map takes over
+    const appFilters = Array.from(document.querySelectorAll("#filters > filter"), filter => filter.cloneNode(true));
     select("#map").remove();
     document.body.insertAdjacentHTML("afterbegin", data[5]);
+    // a map saved before a filter was added to the app lacks it; give it back so the filter buttons work
+    const filters = document.getElementById("filters");
+    for (const filter of appFilters as Element[]) {
+      if (filters && !document.getElementById(filter.id)) filters.append(filter);
+    }
     zonesFilter.type = "all"; // the dropped map's zone types say nothing about the loaded one
 
     // TODO: check if we need it or if LayersRegistry resolves it automatically?

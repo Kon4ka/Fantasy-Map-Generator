@@ -24,6 +24,8 @@ export default ({ mode }: { mode: string }) => ({
     emptyOutDir: true // outDir sits outside root, so Vite would otherwise keep every past build's chunks
   },
   publicDir: "../public",
+  // the map launcher keeps the open map: code edits must not reload its page
+  server: process.env.FMG_NO_HMR ? { hmr: false } : undefined,
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url))

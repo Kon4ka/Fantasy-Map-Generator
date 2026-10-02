@@ -175,12 +175,13 @@ try {
           : ["run", "dev", "--", "--host", "127.0.0.1"];
       server = spawn(npmCommand, npmArguments, {
         cwd: root,
+        env: { ...process.env, FMG_NO_HMR: "1" }, // code edits must not reload the open map
         windowsHide: true,
         stdio: ["ignore", logStream, logStream]
       });
       log(`Запущен локальный сервер, PID ${server.pid}`);
     } else {
-      log("Используется уже запущенный локальный сервер");
+      log("Используется уже запущенный локальный сервер: если он запущен не лаунчером, правки кода могут перезагрузить карту");
     }
 
     await waitForServer();

@@ -133,7 +133,7 @@
     </style>
     <link
       rel="preload"
-      href="index.css?v=6b42ec13"
+      href="index.css?v=a7e81d6b"
       as="style"
       onload="
         this.onload = null;
@@ -311,14 +311,24 @@
           <filter id="filter-night" name="Night">
             <feColorMatrix values="0.38 0.05 0.02 0 0  0.03 0.42 0.05 0 0.01  0.04 0.08 0.58 0 0.03  0 0 0 1 0" />
           </filter>
-          <filter id="filter-dark" name="Dark" color-interpolation-filters="sRGB">
-            <!-- dark mode: invert lightness, rotate hues back, then a gamma curve so mid tones (the sea) darken too -->
+          <!-- dark mode marks the map only; CSS darkens the layers (filter-dark-base) and lightens labels (filter-dark-text) -->
+          <filter id="filter-dark" name="Dark">
+            <feComponentTransfer />
+          </filter>
+          <filter id="filter-dark-base" name="Dark base" color-interpolation-filters="sRGB">
+            <feComponentTransfer>
+              <feFuncR type="linear" slope="0.4" intercept="0.03" />
+              <feFuncG type="linear" slope="0.4" intercept="0.035" />
+              <feFuncB type="linear" slope="0.42" intercept="0.05" />
+            </feComponentTransfer>
+          </filter>
+          <filter id="filter-dark-text" name="Dark text" color-interpolation-filters="sRGB">
             <feColorMatrix values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0" />
             <feColorMatrix type="hueRotate" values="180" />
             <feComponentTransfer>
-              <feFuncR type="gamma" amplitude="0.88" exponent="1.7" offset="0.05" />
-              <feFuncG type="gamma" amplitude="0.88" exponent="1.7" offset="0.05" />
-              <feFuncB type="gamma" amplitude="0.88" exponent="1.7" offset="0.06" />
+              <feFuncR type="linear" slope="0.9" intercept="0.06" />
+              <feFuncG type="linear" slope="0.9" intercept="0.06" />
+              <feFuncB type="linear" slope="0.9" intercept="0.06" />
             </feComponentTransfer>
           </filter>
           <filter id="filter-tint" name="Tint">

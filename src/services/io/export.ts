@@ -301,6 +301,7 @@ async function getMapURL(type: string, config: GetMapURLOptions = {}): Promise<s
     for (let i = 0; i < filters.length; i++) {
       const id = filters[i].id;
       if (cloneEl.querySelector(`[filter='url(#${id})']`)) continue;
+      if (cloneEl.querySelector(`[style*='#${id}"']`)) continue; // referenced by an inlined CSS filter (dark mode)
       if (cloneEl.getAttribute("filter") === `url(#${id})`) continue;
       filters[i].remove();
     }
@@ -641,7 +642,7 @@ function inlineStyle(clone: MapSelection): void {
       const value = compStyle.getPropertyValue(key);
 
       if (key === "cursor") continue; // cursor should be default
-      if (this.hasAttribute(key)) continue; // don't add style if there is the same attribute
+      if (this.hasAttribute(key) && key !== "filter") continue; // don't add style if there is the same attribute; a CSS filter (dark mode) overrides it
       if (value === defaultStyles.getPropertyValue(key)) continue;
       style += `${key}:${value};`;
     }
@@ -650,7 +651,7 @@ function inlineStyle(clone: MapSelection): void {
       const value = compStyle.getPropertyValue(key);
 
       if (key === "cursor") continue; // cursor should be default
-      if (this.hasAttribute(key)) continue; // don't add style if there is the same attribute
+      if (this.hasAttribute(key) && key !== "filter") continue; // don't add style if there is the same attribute; a CSS filter (dark mode) overrides it
       if (value === defaultStyles.getPropertyValue(key)) continue;
       style += `${key}:${value};`;
     }

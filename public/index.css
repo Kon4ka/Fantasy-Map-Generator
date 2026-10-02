@@ -3734,3 +3734,16 @@ div.slider .ui-slider-handle {
 #toolsContent > .grid[hidden] {
   display: none;
 }
+
+/* Dark global filter: the map root only carries the marker; layers darken, labels turn light */
+#map[filter="url(#filter-dark)"] {
+  filter: none;
+}
+
+[filter="url(#filter-dark)"] #viewbox > :not(#labels) {
+  filter: url(#filter-dark-base);
+}
+
+[filter="url(#filter-dark)"] #labels {
+  filter: url(#filter-dark-text);
+}
