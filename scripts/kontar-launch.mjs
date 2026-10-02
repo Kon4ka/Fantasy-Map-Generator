@@ -174,6 +174,7 @@ try {
     const launchContext = () =>
       chromium.launchPersistentContext(profilePath, {
         headless: testRun,
+        chromiumSandbox: true,
         executablePath: browserPath,
         viewport: null,
         args: [

@@ -201,6 +201,7 @@ function option<T extends string | number>(definition: OptionDefinition<T>): Opt
 }
 
 const TEMPLATE = /* html */ `
+  <section data-settings-section="map">
   <p data-tip="Settings for the next map. Generate a new map to apply them">
     Map settings (apply to new maps):
   </p>
@@ -374,6 +375,24 @@ const TEMPLATE = /* html */ `
       </td>
     </tr>
   </table>
+  <div class="settings-actions">
+    <button
+      id="configureWorld"
+      data-tip="Open the World Configurator to set the map position on the globe and the world climate"
+      onclick="window.Controllers.WorldConfigurator.open()"
+    >
+      Configure World
+    </button>
+    <button
+      id="setupLore"
+      data-tip="Click to name the map, date its calendar and describe the world"
+      onclick="window.Controllers.LoreEditor.open()"
+    >
+      Set Lore
+    </button>
+  </div>
+  </section>
+  <section data-settings-section="interface">
   <p data-tip="Interface preferences saved in this browser. Changes apply immediately">
     Interface settings:
   </p>
@@ -644,21 +663,7 @@ const TEMPLATE = /* html */ `
       <td></td>
     </tr>
   </table>
-  <div>
-    <button
-      id="configureWorld"
-      data-tip="Open the World Configurator to set the map position on the globe and the world climate"
-      onclick="window.Controllers.WorldConfigurator.open()"
-    >
-      Configure World
-    </button>
-    <button
-      id="setupLore"
-      data-tip="Click to name the map, date its calendar and describe the world"
-      onclick="window.Controllers.LoreEditor.open()"
-    >
-      Set Lore
-    </button>
+  <div class="settings-actions">
     <button
       id="optionsReset"
       data-tip="Click to restore default options and reload the page"
@@ -667,6 +672,7 @@ const TEMPLATE = /* html */ `
       Reset Options
     </button>
   </div>
+  </section>
 `;
 
 const pendingInputs = new WeakMap<HTMLElement, string>();
@@ -686,9 +692,10 @@ onPerformanceChange(() => syncOption("performancePreset")); // the preset follow
 function addListeners(): void {
   const content = ensureEl("optionsContent");
 
-  const root = ensureEl("options");
-  root.addEventListener("input", onOptionInput);
-  root.addEventListener("change", onOptionInput);
+  for (const root of [ensureEl("options"), ensureEl("settingsDialog")]) {
+    root.addEventListener("input", onOptionInput);
+    root.addEventListener("change", onOptionInput);
+  }
   ensureEl<HTMLSelectElement>("interfaceLanguage").value = getLocale();
   content.addEventListener("change", event => {
     const target = event.target as HTMLSelectElement;
@@ -771,7 +778,7 @@ async function restoreInterfaceFonts(): Promise<void> {
 }
 
 function optionInputs<T extends HTMLElement = HTMLInputElement>(key: string): NodeListOf<T> {
-  return ensureEl("options").querySelectorAll<T>(`[data-option="${key}"]`);
+  return document.querySelectorAll<T>(`[data-option="${key}"]`);
 }
 
 function optionInput<T extends HTMLElement = HTMLInputElement>(key: string): T {
@@ -804,7 +811,7 @@ export function syncOptionInputs(): void {
 }
 
 function syncManors(): void {
-  const output = ensureEl("options").querySelector<HTMLOutputElement>('[data-option-output="manors"]');
+  const output = document.querySelector<HTMLOutputElement>('[data-option-output="manors"]');
   if (output) output.value = isAutoBurgLimit() ? "auto" : String(options.generation.burgs.limit);
 }
 
@@ -818,7 +825,7 @@ function syncCellsDensity(): void {
     input.dataset.cells = String(cellsDesired);
   }
 
-  const readout = ensureEl("options").querySelector<HTMLOutputElement>('[data-option-output="points"]');
+  const readout = document.querySelector<HTMLOutputElement>('[data-option-output="points"]');
   if (!readout) return;
   readout.value = `${cellsDesired / 1000}K`;
   const { h, s, l } = hsl(options.app.ui.themeColor);
@@ -836,7 +843,7 @@ function syncCultures(): void {
 }
 
 function syncPngResolution(): void {
-  const input = ensureEl("options").querySelector<HTMLInputElement>('[data-option="pngResolution"]');
+  const input = document.querySelector<HTMLInputElement>('[data-option="pngResolution"]');
   if (input) input.value = String(options.app.export.pngResolution);
 }
 
@@ -1184,6 +1191,7 @@ export function restoreUi(): void {
   }
 
   Pins.bindIcons(ensureEl("options"), currentValue);
+  Pins.bindIcons(ensureEl("settingsDialog"), currentValue);
   restoreLegacyStylePresets();
 
   // `syncInputs` has already put every preference in its control; these are the ones that also do

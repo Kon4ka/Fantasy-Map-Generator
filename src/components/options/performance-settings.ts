@@ -53,8 +53,28 @@ const SETTINGS: Setting[] = [
       { value: "continuous", label: "While zooming" },
       { value: "settled", label: "After zoom" }
     ]
+  },
+  {
+    key: "motionFilters",
+    label: "Filters while moving",
+    tip: "SVG filters (splotch, shadows, blur) are recomputed on every frame of a zoom or pan. Pausing them keeps movement smooth; they return once the map stops",
+    choices: [
+      { value: "true", label: "Kept" },
+      { value: "false", label: "Paused" }
+    ]
+  },
+  {
+    key: "oceanBake",
+    label: "Bake ocean",
+    tip: "Draw the ocean, depths, waves and coastal bands from cached images instead of live SVG. Much faster on maps with heavy ocean styles; the images are redrawn sharper after zooming in and whenever the ocean changes",
+    choices: [
+      { value: "false", label: "Live" },
+      { value: "true", label: "Baked" }
+    ]
   }
 ];
+
+const BOOLEAN_KEYS = new Set<keyof Settings>(["stateHalos", "motionFilters", "oceanBake"]);
 
 const PRESET_LABELS: Record<string, string> = {
   quality: "Quality",
@@ -92,7 +112,7 @@ function render(): void {
 
 /** A select carries strings; the field decides what the string means */
 function update(key: keyof Settings, raw: string): void {
-  if (key === "stateHalos") setPerformanceSetting(key, raw === "true");
+  if (BOOLEAN_KEYS.has(key)) setPerformanceSetting(key as "stateHalos", raw === "true");
   else setPerformanceSetting(key, raw as Settings[typeof key]);
 }
 

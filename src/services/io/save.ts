@@ -3,6 +3,7 @@
 import { closeDialogs } from "@/components/dialog/dialog-helpers";
 import { Layers } from "@/components/layers";
 import { Notes } from "@/components/notes";
+import { OceanBake } from "@/components/ocean-bake";
 import { tip } from "@/components/tooltips";
 import { GraphOverride } from "@/generators/graph-override";
 import { Services } from "@/services";
@@ -83,6 +84,7 @@ function prepareMapData(): string {
   cloneEl.setAttribute("width", String(options.map.graph.width));
   cloneEl.setAttribute("height", String(options.map.graph.height));
   cloneEl.querySelector("#viewbox")?.removeAttribute("transform");
+  OceanBake.strip(cloneEl);
 
   // relief icons are stored in pack.relief, the layer holds only the currently visible ones
   const cloneTerrain = cloneEl.querySelector("#terrain");

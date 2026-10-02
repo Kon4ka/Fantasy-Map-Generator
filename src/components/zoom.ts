@@ -1,5 +1,6 @@
 import { type D3ZoomEvent, interpolateZoom, select, type ZoomView, zoom, zoomIdentity, zoomTransform } from "d3";
 import { Layers } from "@/components/layers";
+import { OceanBake } from "@/components/ocean-bake";
 import { setViewportTransform, viewport } from "@/components/viewport";
 import { ViewportLayers } from "@/renderers/viewport/viewport-renderer";
 import { ensureEl, findEl } from "@/utils/nodeUtils";
@@ -36,6 +37,7 @@ function onZoom(event: D3ZoomEvent<SVGSVGElement, unknown>): void {
   const isScaleChanged = viewport.scale !== k;
   const isPositionChanged = viewport.x !== x || viewport.y !== y;
   if (!isScaleChanged && !isPositionChanged) return;
+  if (!isViewChanged && !options.app.performance.motionFilters) findEl("map")?.classList.add("map-moving");
   isViewChanged = true;
 
   setViewportTransform(k, x, y);
@@ -87,7 +89,9 @@ function handleZoomEnd(): void {
     handleZoomPerFrame();
   }
 
+  findEl("map")?.classList.remove("map-moving");
   invokeActiveZooming();
+  OceanBake.onViewSettled();
 }
 
 /** Mirror the map transform onto the heightmap tracing canvas */

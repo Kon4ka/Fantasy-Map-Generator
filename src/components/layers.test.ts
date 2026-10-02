@@ -42,27 +42,61 @@ it("adopts old nested ocean heights without duplicates or losing content", () =>
   expect(displayOf("oceanHeights")).not.toBe("none");
 });
 
-it("new maps place ice below relief", () => {
+it("new maps place ice above territorial fills and below relief", () => {
   const order = MapLayers.state.order;
+  for (const fill of ["heightmap", "biomes", "religions", "cultures", "states", "provinces", "zones", "temperature"]) {
+    expect(order.indexOf(fill)).toBeLessThan(order.indexOf("ice"));
+  }
   expect(order.indexOf("ice")).toBeLessThan(order.indexOf("relief"));
 });
 
-it("loaded maps upgrade ice ordering without changing other layers, active flags or the source state", () => {
+it.each([
+  ["rivers", "relief", "states", "ice", "labels"],
+  ["rivers", "ice", "relief", "states", "labels"]
+])("loaded maps repair covered ice and relief without changing other layers or active flags: %j", (...order) => {
   const restore = vi.spyOn(MapLayers, "restore").mockImplementation(() => {});
   try {
-    const state = { order: ["rivers", "relief", "states", "ice", "labels"], active: ["ice", "relief"] };
+    const state = { order, active: ["ice", "states"] };
+    const original = structuredClone(state);
     restoreMapLayers(state);
     expect(restore).toHaveBeenLastCalledWith({
-      order: ["rivers", "ice", "relief", "states", "labels"],
+      order: ["rivers", "states", "ice", "relief", "labels"],
       active: state.active
     });
-    expect(state.order).toEqual(["rivers", "relief", "states", "ice", "labels"]);
-    const custom = { order: ["ice", "states", "relief"], active: ["relief"] };
+    expect(state).toEqual(original);
+    const custom = { order: ["states", "ice", "labels", "relief"], active: ["relief"] };
     restoreMapLayers(custom);
     expect(restore).toHaveBeenLastCalledWith(custom);
   } finally {
     restore.mockRestore();
   }
+});
+
+it("repairs ice-only maps and stays stable when the repaired state is saved and loaded again", () => {
+  const restore = vi.spyOn(MapLayers, "restore").mockImplementation(() => {});
+  try {
+    restoreMapLayers({ order: ["ice", "biomes", "states", "zones", "labels"], active: ["ice", "states"] });
+    const repaired = restore.mock.lastCall![0];
+    expect(repaired.order).toEqual(["biomes", "states", "zones", "ice", "labels"]);
+    restoreMapLayers(JSON.parse(JSON.stringify(repaired)));
+    expect(restore).toHaveBeenLastCalledWith(repaired);
+  } finally {
+    restore.mockRestore();
+  }
+});
+
+it("restores real SVG ice above states without changing opacity, geometry or visibility", () => {
+  document.getElementById("viewbox")!.innerHTML =
+    '<g id="ice" opacity="0.9" fill="#eef7fa"><polygon data-id="5" type="glacier" points="0,0 10,0 0,10"/></g>' +
+    '<g id="terrain"/><g id="regions"><g id="statesBody"><path fill="#00ff00"/></g></g>';
+  const before = document.getElementById("ice")!.outerHTML;
+  restoreMapLayers({ order: ["ice", "relief", "states", "labels"], active: ["ice", "states"] });
+  const ids = groupIds();
+  expect(ids.indexOf("regions")).toBeLessThan(ids.indexOf("ice"));
+  expect(ids.indexOf("ice")).toBeLessThan(ids.indexOf("terrain"));
+  expect(document.getElementById("ice")!.outerHTML.replace(' data-layer="ice"', "")).toBe(before);
+  expect(displayOf("ice")).not.toBe("none");
+  expect(displayOf("terrain")).toBe("none");
 });
 
 beforeEach(() => {

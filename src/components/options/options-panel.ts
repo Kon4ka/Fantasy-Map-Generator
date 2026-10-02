@@ -1,5 +1,6 @@
 // The collapsible panel on the right and the sticked menu below it
 import { showExportPane, showLoadPane, showSavePane } from "@/components/options/io-panes";
+import { SettingsDialog } from "@/components/options/settings-dialog";
 import { changeViewMode } from "@/components/options/view-mode";
 import { clearMainTip } from "@/components/tooltips";
 import { resetZoom } from "@/components/zoom";
@@ -12,9 +13,7 @@ import { ensureEl, findEl } from "@/utils/nodeUtils";
 const TAB_CONTENT: Record<string, string> = {
   layersTab: "layersContent",
   styleTab: "styleContent",
-  optionsTab: "optionsContent",
-  toolsTab: "toolsContent",
-  aboutTab: "aboutContent"
+  toolsTab: "toolsContent"
 };
 
 export function showOptions(event?: Event): void {
@@ -148,6 +147,7 @@ function initialize(): void {
     else if (id === "loadButton") void showLoadPane();
     else if (id === "zoomReset") resetZoom(1000);
     else if (id === "searchButton") Controllers.Omnibar.open();
+    else if (id === "settingsButton") SettingsDialog.open();
   });
 
   ensureEl("viewMode").addEventListener("click", changeViewMode);

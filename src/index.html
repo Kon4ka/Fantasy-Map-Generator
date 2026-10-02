@@ -133,7 +133,7 @@
     </style>
     <link
       rel="preload"
-      href="index.css?v=55209296"
+      href="index.css?v=6b42ec13"
       as="style"
       onload="
         this.onload = null;
@@ -308,6 +308,19 @@
           <filter id="filter-dingy" name="Dingy">
             <feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0.3 0.3 0 0 0 0 0 1 0"></feColorMatrix>
           </filter>
+          <filter id="filter-night" name="Night">
+            <feColorMatrix values="0.38 0.05 0.02 0 0  0.03 0.42 0.05 0 0.01  0.04 0.08 0.58 0 0.03  0 0 0 1 0" />
+          </filter>
+          <filter id="filter-dark" name="Dark" color-interpolation-filters="sRGB">
+            <!-- dark mode: invert lightness, rotate hues back, then a gamma curve so mid tones (the sea) darken too -->
+            <feColorMatrix values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0" />
+            <feColorMatrix type="hueRotate" values="180" />
+            <feComponentTransfer>
+              <feFuncR type="gamma" amplitude="0.88" exponent="1.7" offset="0.05" />
+              <feFuncG type="gamma" amplitude="0.88" exponent="1.7" offset="0.05" />
+              <feFuncB type="gamma" amplitude="0.88" exponent="1.7" offset="0.06" />
+            </feComponentTransfer>
+          </filter>
           <filter id="filter-tint" name="Tint">
             <feColorMatrix values="1.1 0 0 0 0  0 1.1 0 0 0  0 0 0.9 0 0  0 0 0 1 0"></feColorMatrix>
           </filter>
@@ -387,16 +400,12 @@
           </button>
           <button id="layersTab" data-tip="Click to change map layers" class="options active">Layers</button>
           <button id="styleTab" data-tip="Click to open style editor" class="options">Style</button>
-          <button id="optionsTab" data-tip="Click to change generation and UI options" class="options">Options</button>
           <button id="toolsTab" data-tip="Click to open tools menu" class="options">Tools</button>
-          <button id="aboutTab" data-tip="Click to see Generator info" class="options">About</button>
         </div>
         <div id="layersContent" class="tabcontent" style="display: block"></div>
         <div id="styleContent" class="tabcontent"></div>
-        <div id="optionsContent" class="tabcontent"></div>
         <div id="toolsContent" class="tabcontent"></div>
         <div id="customizationMenu" class="tabcontent"></div>
-        <div id="aboutContent" class="tabcontent"></div>
       </div>
     </div>
     <div id="fileToolbar">
@@ -427,11 +436,33 @@
         <button id="zoomReset" type="button" aria-label="Zoom out" title="Zoom out" data-tip="Reset map zoom" data-shortcut="0 (zero)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21 M7 10h6"/></svg>
         </button>
+        <button id="settingsButton" type="button" aria-label="Settings" title="Settings" data-tip="Open map, interface and performance settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9l2.1 2.1 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1"/></svg>
+        </button>
         <button id="searchButton" type="button" aria-label="Search" title="Search" data-tip="Search map and commands" data-shortcut="Space">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21"/></svg>
         </button>
         </div>
         <div id="currentMapFile" translate="no"></div>
+      </div>
+    </div>
+    <div id="settingsDialog" role="dialog" aria-labelledby="settingsTitle" hidden>
+      <div class="settings-window">
+        <header class="settings-header">
+          <h2 id="settingsTitle">Settings</h2>
+          <button id="settingsClose" type="button" aria-label="Close" data-tip="Close settings" data-shortcut="Esc">✕</button>
+        </header>
+        <div class="settings-body">
+          <nav class="settings-nav" aria-label="Settings sections">
+            <button type="button" data-settings-nav="map">Map</button>
+            <button type="button" data-settings-nav="interface">Interface</button>
+            <button type="button" data-settings-nav="about">About</button>
+          </nav>
+          <div class="settings-pages">
+            <div id="optionsContent"></div>
+            <div id="aboutContent" data-settings-section="about"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="exitCustomization">

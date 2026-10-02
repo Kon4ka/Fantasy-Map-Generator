@@ -1,6 +1,7 @@
 // Layers tab: a projection of the Layers registry. Renders the layer buttons and wires them up.
 import type { LayerId } from "@/components/layers";
 import { Layers } from "@/components/layers";
+import { CATEGORIES, type Category, iconHTML } from "@/components/options/panel-icons";
 import { ViewportLayers } from "@/renderers/viewport/viewport-renderer";
 import { isCtrlClick } from "@/utils";
 import { ensureEl, findEl } from "@/utils/nodeUtils";
@@ -66,6 +67,44 @@ export const LAYER_PRESETS: Record<string, string> = {
   landmass: "Pure landmass"
 };
 
+// layer id: [category, icon-font name or SVG key]
+const LAYER_META: Partial<Record<LayerId, [Category, string]>> = {
+  texture: ["nature", "paint-roller"],
+  heightmap: ["nature", "mountain"],
+  oceanDepths: ["nature", "depths"],
+  lakes: ["nature", "lake"],
+  biomes: ["nature", "leaf"],
+  rivers: ["nature", "river"],
+  relief: ["nature", "tree"],
+  temperature: ["nature", "temperature-high"],
+  ice: ["nature", "ice"],
+  precipitation: ["nature", "umbrella"],
+  religions: ["society", "place-of-worship"],
+  cultures: ["society", "users"],
+  population: ["society", "user-friends"],
+  states: ["politics", "flag"],
+  provinces: ["politics", "map"],
+  zones: ["politics", "object-ungroup"],
+  borders: ["politics", "borders"],
+  emblems: ["politics", "shield-alt"],
+  burgIcons: ["politics", "fort-awesome"],
+  military: ["politics", "chess-knight"],
+  routes: ["economy", "map-signs"],
+  goods: ["economy", "box"],
+  markets: ["economy", "store"],
+  trade: ["economy", "exchange"],
+  journeys: ["economy", "compass"],
+  cells: ["notes", "cells"],
+  grid: ["notes", "grid"],
+  coordinates: ["notes", "globe"],
+  compass: ["notes", "windRose"],
+  labels: ["notes", "font"],
+  markers: ["notes", "map-pin"],
+  rulers: ["notes", "ruler"],
+  scaleBar: ["notes", "scaleBar"],
+  vignette: ["notes", "adjust"]
+};
+
 export const getLayerByShortcut = (code: string): LayerId | undefined =>
   [...LAYER_TOGGLES].find(([, button]) => button.shortcut === code)?.[0];
 
@@ -90,11 +129,10 @@ const TEMPLATE = /* html */ `
     style="display: none"
   ></button>
   <p>Displayed layers and layer order:</p>
-  <ul
+  <div
     data-tip="Click to toggle a layer, drag to raise or lower a layer. Ctrl + click to edit layer style"
     id="mapLayers"
-  >
-  </ul>
+  ></div>
   <div class="tip">Click to toggle, drag to raise or lower the layer</div>
   <div class="tip">Ctrl + click to edit layer style</div>
   <div id="viewMode" data-tip="Set view mode">
@@ -114,22 +152,36 @@ const TEMPLATE = /* html */ `
 
 ensureEl("layersContent").innerHTML = TEMPLATE;
 
+/** Layers grouped by category, each group in z-order. Dragging reorders within a group */
 function render(): void {
-  ensureEl("mapLayers").replaceChildren(
-    ...Layers.all.flatMap(layer => {
-      const button = LAYER_TOGGLES.get(layer.id);
-      if (!button) return [];
+  const lists = new Map(CATEGORIES.map(([category]) => [category, [] as HTMLLIElement[]]));
+  for (const layer of Layers.all) {
+    const button = LAYER_TOGGLES.get(layer.id);
+    if (!button) continue;
+    const [category, icon] = LAYER_META[layer.id] ?? ["notes", "circle-empty"];
 
-      const item = document.createElement("li");
-      item.dataset.layer = layer.id;
-      item.dataset.tip = `${button.label.replace(/<\/?u>/g, "")}: click to toggle, drag to raise or lower the layer. Ctrl + click to edit layer style`;
-      if (button.shortcut) item.dataset.shortcut = button.hint ?? button.shortcut.replace("Key", "");
-      item.innerHTML = button.label;
-      item.classList.toggle("buttonoff", !Layers.isOn(layer.id));
-      item.classList.toggle("solid", layer.params.parent !== "viewbox"); // layers outside the viewbox cannot be reordered
-      return [item];
-    })
-  );
+    const item = document.createElement("li");
+    item.dataset.layer = layer.id;
+    item.dataset.tip = `${button.label.replace(/<\/?u>/g, "")}: click to toggle, drag to raise or lower the layer. Ctrl + click to edit layer style`;
+    if (button.shortcut) item.dataset.shortcut = button.hint ?? button.shortcut.replace("Key", "");
+    item.innerHTML = `${iconHTML(icon)}<span class="layer-label">${button.label}</span>`;
+    item.classList.toggle("buttonoff", !Layers.isOn(layer.id));
+    item.classList.toggle("solid", layer.params.parent !== "viewbox"); // layers outside the viewbox cannot be reordered
+    lists.get(category)?.push(item);
+  }
+
+  const container = ensureEl("mapLayers");
+  container.replaceChildren();
+  for (const [category, label] of CATEGORIES) {
+    const items = lists.get(category) ?? [];
+    if (!items.length) continue;
+    const list = document.createElement("ul");
+    list.className = "layer-list";
+    list.append(...items);
+    container.insertAdjacentHTML("beforeend", `<div class="panel-category">${label}</div>`);
+    container.append(list);
+  }
+  makeSortable();
 }
 
 ensureEl("mapLayers").addEventListener("click", event => {
@@ -140,19 +192,27 @@ ensureEl("mapLayers").addEventListener("click", event => {
   Layers.toggle(id);
 });
 
-// move layers on mapLayers dragging. TODO: deprecate jQuery
-$("#mapLayers").sortable({
-  items: "li:not(.solid)",
-  containment: "parent",
-  cancel: ".solid",
-  update: (_event: Event, ui: { item: any }) => {
-    const id = ui.item.data("layer");
-    const before = ui.item.next().data("layer");
-    const thisLayer = Layers.has(id) ? id : undefined;
-    const beforeLayer = Layers.has(before) ? before : undefined;
-    if (thisLayer) Layers.move(thisLayer, beforeLayer);
-  }
-});
+// move layers on dragging within a category. TODO: deprecate jQuery
+function makeSortable(): void {
+  $("#mapLayers .layer-list").sortable({
+    items: "li:not(.solid)",
+    containment: "parent",
+    cancel: ".solid",
+    update: (_event: Event, ui: { item: any }) => {
+      const id = ui.item.data("layer");
+      if (!Layers.has(id)) return;
+      Layers.move(id, nextLayer(ui.item.next().data("layer"), ui.item.prev().data("layer"), id));
+    }
+  });
+}
+
+/** The layer to move before: the next one in the group, or else whatever follows the previous one */
+function nextLayer(next: string | undefined, previous: string | undefined, moved: string): LayerId | undefined {
+  if (next && Layers.has(next)) return next;
+  if (!previous) return undefined;
+  const others = Layers.all.filter(layer => layer.id !== moved);
+  return others[others.findIndex(layer => layer.id === previous) + 1]?.id;
+}
 
 Layers.subscribe(render);
 Layers.subscribe(() => ViewportLayers.renderNow());

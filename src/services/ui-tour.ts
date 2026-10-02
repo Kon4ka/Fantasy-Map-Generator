@@ -3,6 +3,8 @@ import { closeDialogs } from "@/components/dialog/dialog-helpers";
 import { ensureEl } from "@/utils/nodeUtils";
 import "driver.js/dist/driver.css";
 import { showExportPane } from "@/components/options/io-panes";
+import { SettingsDialog } from "@/components/options/settings-dialog";
+import { selectToolsGroup } from "@/components/options/tabs/tools-tab";
 
 function closeOptionsPanel() {
   const options = ensureEl("options");
@@ -182,22 +184,18 @@ function start() {
 
       // ── Options tab ──────────────────────────────────────────────────────────
       {
-        element: "#optionsTab",
-        onHighlightStarted: () => {
-          ensureEl("optionsTab")?.click();
-        },
+        element: "#settingsDialog .settings-nav",
+        onHighlightStarted: () => SettingsDialog.open("map"),
         popover: {
-          title: "Options Tab",
+          title: "Settings",
           description:
-            "The Options tab lets you configure world generation parameters like the number of states, cultures, religions, and other settings that shape the generated world.",
+            "The Settings window (gear button in the file menu) lets you configure world generation parameters like the number of states, cultures, religions, and other settings that shape the generated world.",
           side: "bottom"
         }
       },
       {
-        element: "#optionsContent",
-        onHighlightStarted: () => {
-          ensureEl("optionsTab")?.click();
-        },
+        element: '[data-settings-section="map"]',
+        onHighlightStarted: () => SettingsDialog.open("map"),
         popover: {
           title: "Generation Options",
           description:
@@ -209,7 +207,7 @@ function start() {
         element: "#configureWorld",
         onHighlightStarted: () => {
           closeDialogs();
-          ensureEl("optionsTab")?.click();
+          SettingsDialog.open("map");
         },
         popover: {
           title: "Configure World",
@@ -225,6 +223,7 @@ function start() {
         element: "#worldConfigurator",
         disableActiveInteraction: false,
         onHighlightStarted: () => {
+          SettingsDialog.close();
           void Controllers.WorldConfigurator.open();
         },
         popover: {
@@ -257,6 +256,7 @@ function start() {
         element: "#editHeightmapButton",
         onHighlightStarted: () => {
           ensureEl("toolsTab")?.click();
+          selectToolsGroup("edit");
         },
         popover: {
           title: "Edit the Heightmap",
@@ -290,22 +290,18 @@ function start() {
 
       // ── About tab ────────────────────────────────────────────────────────────
       {
-        element: "#aboutTab",
-        onHighlightStarted: () => {
-          ensureEl("aboutTab")?.click();
-        },
+        element: '[data-settings-nav="about"]',
+        onHighlightStarted: () => SettingsDialog.open("about"),
         popover: {
-          title: "About Tab",
+          title: "About",
           description:
-            "The About tab has links to documentation, video tutorials, the community Discord, and version information.",
+            "The About section of the Settings window has links to documentation, video tutorials, the community Discord, and version information.",
           side: "bottom"
         }
       },
       {
         element: "#aboutContent",
-        onHighlightStarted: () => {
-          ensureEl("aboutTab")?.click();
-        },
+        onHighlightStarted: () => SettingsDialog.open("about"),
         popover: {
           title: "About & Resources",
           description:
@@ -318,6 +314,7 @@ function start() {
       {
         element: "#exportButton",
         onHighlightStarted: () => {
+          SettingsDialog.close();
           closeDialogs();
         },
         popover: {

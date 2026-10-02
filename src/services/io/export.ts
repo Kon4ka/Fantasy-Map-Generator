@@ -1,6 +1,7 @@
 import type { Selection } from "d3";
 import { select } from "d3";
 import { Layers } from "@/components/layers";
+import { OceanBake } from "@/components/ocean-bake";
 import { tip } from "@/components/tooltips";
 import { viewport } from "@/components/viewport";
 import { renderEmblemDefinitions } from "@/renderers/draw-emblems";
@@ -261,6 +262,7 @@ async function getMapURL(type: string, config: GetMapURLOptions = {}): Promise<s
   const clone: MapSelection = select(cloneEl);
   try {
     if (!debug) clone.select("#debug").remove();
+    OceanBake.strip(cloneEl);
 
     const cloneDefs = cloneEl.getElementsByTagName("defs")[0];
     const svgDefs = ensureEl<SVGSVGElement>("defElements");

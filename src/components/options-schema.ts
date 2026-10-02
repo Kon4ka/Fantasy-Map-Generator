@@ -183,7 +183,9 @@ export const optionsSchema = z.strictObject({
     performance: z.strictObject({
       shapeRendering: z.enum(["geometricPrecision", "auto", "optimizeSpeed", "crispEdges"]),
       stateHalos: z.boolean(),
-      viewportRedraw: z.enum(["continuous", "settled"])
+      viewportRedraw: z.enum(["continuous", "settled"]),
+      motionFilters: z.boolean(), // keep SVG filters on while the map moves
+      oceanBake: z.boolean() // draw the ocean from cached images
     }),
     onLoad: z.enum(["random", "lastSaved"]), // what the app does with no map asked for
     zoomExtent: z.strictObject({ min: positive, max: positive }).refine(({ min, max }) => min <= max, {

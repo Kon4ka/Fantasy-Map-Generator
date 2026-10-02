@@ -1,11 +1,106 @@
 // Tools tab: buttons dispatch the same commands as global search.
 import { MAP_COMMANDS } from "@/components/map-commands";
+import { CATEGORIES, type Category, iconHTML } from "@/components/options/panel-icons";
 import { tip } from "@/components/tooltips";
 import { ensureEl } from "@/utils";
 
+const GROUP_KEY = "toolsGroup";
+
+// tool id: [category, icon-font name or SVG key]
+const TOOLS: Record<string, [Category, string]> = {
+  editBiomesButton: ["nature", "leaf"],
+  editCoastlineSettings: ["nature", "draw-polygon"],
+  editHeightmapButton: ["nature", "mountain"],
+  overviewFeaturesButton: ["nature", "globe"],
+  overviewRiversButton: ["nature", "river"],
+  regenerateIce: ["nature", "ice"],
+  regenerateOceanDepths: ["nature", "depths"],
+  regenerateRivers: ["nature", "river"],
+  addRiver: ["nature", "river"],
+  editCulturesButton: ["society", "users"],
+  regenerateCultures: ["society", "users"],
+  editReligions: ["society", "place-of-worship"],
+  regenerateReligions: ["society", "place-of-worship"],
+  editNamesBaseButton: ["society", "book"],
+  regeneratePopulation: ["society", "user-friends"],
+  editStatesButton: ["politics", "flag"],
+  regenerateStates: ["politics", "flag"],
+  editProvincesButton: ["politics", "map"],
+  regenerateProvinces: ["politics", "map"],
+  editDiplomacyButton: ["politics", "balance-scale"],
+  overviewBurgsButton: ["politics", "fort-awesome"],
+  regenerateBurgs: ["politics", "fort-awesome"],
+  addBurgTool: ["politics", "fort-awesome"],
+  editEmblemButton: ["politics", "shield-alt"],
+  regenerateEmblems: ["politics", "shield-alt"],
+  overviewMilitaryButton: ["politics", "chess-knight"],
+  regenerateMilitary: ["politics", "chess-knight"],
+  editZonesButton: ["politics", "object-ungroup"],
+  regenerateZones: ["politics", "object-ungroup"],
+  editGoods: ["economy", "box"],
+  regenerateGoods: ["economy", "box"],
+  overviewMarketsButton: ["economy", "store"],
+  regenerateMarkets: ["economy", "store"],
+  editTradeAnimationButton: ["economy", "exchange"],
+  regenerateEconomy: ["economy", "chart-pie"],
+  regenerateProduction: ["economy", "hammer"],
+  overviewRoutesButton: ["economy", "map-signs"],
+  regenerateRoutes: ["economy", "map-signs"],
+  addRoute: ["economy", "map-signs"],
+  overviewJourneysButton: ["economy", "compass"],
+  overviewLabelsButton: ["notes", "font"],
+  regenerateStateLabels: ["notes", "font"],
+  addLabel: ["notes", "font"],
+  overviewMarkersButton: ["notes", "map-pin"],
+  regenerateMarkers: ["notes", "map-pin"],
+  addMarker: ["notes", "map-pin"],
+  regenerateReliefIcons: ["notes", "tree"],
+  editNotesButton: ["notes", "doc"],
+  editMeasurersButton: ["notes", "ruler"],
+  editUnitsButton: ["notes", "drafting-compass"],
+  overviewCellsButton: ["nature", "cells"],
+  overviewChartsButton: ["economy", "chart-bar"],
+  openMinimapButton: ["notes", "map-o"],
+  openSubmapTool: ["notes", "resize-small"],
+  openTransformTool: ["notes", "move"],
+  openWrapTool: ["notes", "brush"]
+};
+
+/** Give each tool its icon; in big groups, sort tools into labeled categories */
+function decorateTools(content: HTMLElement): void {
+  for (const grid of content.querySelectorAll<HTMLElement>("[data-tools-group]")) {
+    const buttons = Array.from(grid.querySelectorAll<HTMLButtonElement>(":scope > button"));
+    for (const button of buttons) {
+      for (const node of Array.from(button.childNodes)) {
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent?.trim()) continue;
+        const label = document.createElement("span");
+        label.className = "tool-label"; // a bare text node in a flex row cannot ellipsize
+        label.textContent = node.textContent.trim();
+        node.replaceWith(label);
+      }
+      const meta = TOOLS[button.id];
+      if (meta) button.insertAdjacentHTML("afterbegin", iconHTML(meta[1]));
+    }
+    if (buttons.length <= 6) continue;
+    grid.replaceChildren();
+    for (const [category, label] of CATEGORIES) {
+      const members = buttons.filter(button => (TOOLS[button.id]?.[0] ?? "notes") === category);
+      if (!members.length) continue;
+      grid.insertAdjacentHTML("beforeend", `<div class="tools-category">${label}</div>`);
+      grid.append(...members);
+    }
+  }
+}
+
 const TEMPLATE = /* html */ `
-  <div class="separator">Edit</div>
-  <div class="grid">
+  <div class="tools-tabs" role="tablist">
+    <button data-tools-tab="edit" data-tip="Open editors of map elements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 3l3 3-9 9-3-3z M9 12c-3 0-5 2-5 5 0 1.5-1 2.5-2 3 4 1 9 0 9-5"/></svg><span>Edit</span></button>
+    <button data-tools-tab="regenerate" data-tip="Generate map elements anew"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2 M3 12a9 9 0 0 1 15.5-6.2 M18.5 2v4h-4 M5.5 22v-4h4"/></svg><span>Regenerate</span></button>
+    <button data-tools-tab="add" data-tip="Place new elements on the map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg><span>Add</span></button>
+    <button data-tools-tab="show" data-tip="Overviews of map data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Show</span></button>
+    <button data-tools-tab="create" data-tip="Make a new map out of this one"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z M19 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span>Create</span></button>
+  </div>
+  <div class="grid" data-tools-group="edit">
     <button id="editBiomesButton" data-tip="Click to open Biomes Editor" data-shortcut="Shift + B">
       Biomes
     </button>
@@ -89,8 +184,7 @@ const TEMPLATE = /* html */ `
     <button id="editUnitsButton" data-tip="Click to open Units Editor" data-shortcut="Shift + Q">Units</button>
     <button id="editZonesButton" data-tip="Click to open Zones Editor" data-shortcut="Shift + Z">Zones</button>
   </div>
-  <div class="separator">Regenerate</div>
-  <div id="regenerateFeature" class="grid">
+  <div id="regenerateFeature" class="grid" data-tools-group="regenerate">
     <button
       id="regenerateBurgs"
       data-tip="Click to regenerate all unlocked burgs and routes. States will remain as they are. Note: burgs are only generated in populated areas with culture assigned"
@@ -167,8 +261,7 @@ const TEMPLATE = /* html */ `
       Zones
     </button>
   </div>
-  <div class="separator">Add</div>
-  <div id="addFeature" class="grid">
+  <div id="addFeature" class="grid" data-tools-group="add">
     <button
       id="addBurgTool"
       data-tip="Click on map to place a burg. Hold Shift to add multiple"
@@ -200,8 +293,7 @@ const TEMPLATE = /* html */ `
     </button>
     <button id="addRoute" data-tip="Open route creation dialog" data-shortcut="Shift + 5">Route</button>
   </div>
-  <div class="separator">Show</div>
-  <div class="grid">
+  <div class="grid" data-tools-group="show">
     <button id="overviewCellsButton" data-tip="Click to open Cell details view" data-shortcut="Shift + E">
       Cells
     </button>
@@ -216,8 +308,7 @@ const TEMPLATE = /* html */ `
       Minimap
     </button>
   </div>
-  <div class="separator">Create</div>
-  <div class="grid">
+  <div class="grid" data-tools-group="create">
     <button id="openSubmapTool" data-tip="Click to generate a submap from the current viewport">Submap</button>
     <button id="openTransformTool" data-tip="Click to transform the map">Transform</button>
     <button id="openWrapTool" data-tip="Adjust cell shapes with a brush">Wrap</button>
@@ -225,11 +316,38 @@ const TEMPLATE = /* html */ `
 `;
 
 ensureEl("toolsContent").innerHTML = TEMPLATE;
+decorateTools(ensureEl("toolsContent"));
+selectToolsGroup(readGroup());
+
+/** Show one group of tools; the choice survives reloads */
+export function selectToolsGroup(group: string): void {
+  const content = ensureEl("toolsContent");
+  if (!content.querySelector(`[data-tools-group="${group}"]`)) group = "edit";
+  for (const grid of content.querySelectorAll<HTMLElement>("[data-tools-group]")) {
+    grid.hidden = grid.dataset.toolsGroup !== group;
+  }
+  for (const tab of content.querySelectorAll<HTMLElement>("[data-tools-tab]")) {
+    tab.classList.toggle("active", tab.dataset.toolsTab === group);
+  }
+  try {
+    localStorage.setItem(GROUP_KEY, group);
+  } catch {}
+}
+
+function readGroup(): string {
+  try {
+    return localStorage.getItem(GROUP_KEY) ?? "edit";
+  } catch {
+    return "edit";
+  }
+}
 
 ensureEl("toolsContent").addEventListener("click", event => {
+  const tab = (event.target as HTMLElement).closest<HTMLElement>("[data-tools-tab]");
+  if (tab) return selectToolsGroup(tab.dataset.toolsTab!);
   if (customization) return tip("Please exit the customization mode first", false, "error");
-  if (!(event instanceof MouseEvent) || !(event.target instanceof HTMLElement)) return;
-  if (!["BUTTON", "I"].includes(event.target.tagName)) return;
-  const command = MAP_COMMANDS.find(command => command.id === (event.target as HTMLElement).id);
+  if (!(event instanceof MouseEvent) || !(event.target instanceof Element)) return;
+  const target = event.target.closest("i[id], button"); // the tool icon belongs to its button
+  const command = target && MAP_COMMANDS.find(command => command.id === target.id);
   if (command) void command.run(event);
 });

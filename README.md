@@ -2,6 +2,8 @@
 
 Azgaar's _Fantasy Map Generator_ is a free web application that helps fantasy writers, game masters, and cartographers create and edit fantasy maps.
 
+Kontar Edition: [Инструкция для ИИ и статус MCP-интеграции](docs/ai-mcp-guide.md).
+
 Link: [azgaar.github.io/Fantasy-Map-Generator](https://azgaar.github.io/Fantasy-Map-Generator).
 
 Refer to the [project wiki](https://github.com/Azgaar/Fantasy-Map-Generator/wiki) for guidance. Development is tracked on the [FMG dev board](https://github.com/users/Azgaar/projects/3). Some details are covered in my old blog [_Fantasy Maps for fun and glory_](https://azgaar.wordpress.com).

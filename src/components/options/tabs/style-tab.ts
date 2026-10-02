@@ -1020,6 +1020,8 @@ const TEMPLATE = /* html */ `
     <button id="sepia" class="radio">Sepia</button>
     <button id="dingy" class="radio">Dingy</button>
     <button id="tint" class="radio">Tint</button>
+    <button id="night" class="radio">Night</button>
+    <button id="dark" class="radio">Dark</button>
   </div>
 `;
 

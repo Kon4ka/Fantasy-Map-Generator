@@ -38,7 +38,7 @@
 #dialogs select,
 #dialogs textarea,
 #dialogs option,
-#options option,
+:is(#options, #settingsDialog) option,
 #dialogs button {
   background-color: var(--bg-fields);
   color: var(--text-dialogs);
@@ -473,6 +473,12 @@ button.ui-button:disabled:hover {
   padding: 0.6em 0.45em;
 }
 
+#optionsTrigger,
+#regenerate {
+  border-radius: var(--ui-window-radius);
+  box-shadow: var(--ui-window-shadow);
+}
+
 @media (max-width: 600px) {
   #optionsTrigger {
     font-size: 2em;
@@ -493,20 +499,20 @@ button.ui-button:disabled:hover {
   color: var(--text-light);
 }
 
-#options input,
-#options select,
-#options button {
+:is(#options, #settingsDialog) input,
+:is(#options, #settingsDialog) select,
+:is(#options, #settingsDialog) button {
   font-family: var(--monospace);
 }
 
-#options input,
-#options select {
+:is(#options, #settingsDialog) input,
+:is(#options, #settingsDialog) select {
   color: var(--text-dialogs);
   color-scheme: var(--dialog-color-scheme);
   background-color: var(--bg-fields);
 }
 
-#options button {
+:is(#options, #settingsDialog) button {
   color: var(--text-main);
 }
 
@@ -540,23 +546,23 @@ button.options {
   transition: 0.2s;
 }
 
-#options button.active {
+:is(#options, #settingsDialog) button.active {
   background-color: var(--header);
   color: var(--text-header);
 }
 
-#options button.options:hover {
+:is(#options, #settingsDialog) button.options:hover {
   background-color: var(--header-active);
   color: var(--text-header-active);
 }
 
-#options p {
+:is(#options, #settingsDialog) p {
   font-style: italic;
   font-weight: bold;
   margin: 0.8em 0 0 0;
 }
 
-#options .tip {
+:is(#options, #settingsDialog) .tip {
   color: var(--text-light);
   font-size: 0.9em;
   font-family: sans-serif;
@@ -583,13 +589,13 @@ button.options {
   font-size: 0.9em;
 }
 
-#options i {
+:is(#options, #settingsDialog) i {
   color: var(--text-light);
   font-size: 0.85em;
   cursor: pointer;
 }
 
-#options button i.icon-cog {
+:is(#options, #settingsDialog) button i.icon-cog {
   position: absolute;
   padding: 0.1em 0.3em;
   background-color: var(--bg-lighter);
@@ -599,17 +605,17 @@ button.options {
   transition: 0.4s ease-in-out;
 }
 
-#options button i.icon-cog:hover {
+:is(#options, #settingsDialog) button i.icon-cog:hover {
   color: var(--text-light);
   background-color: var(--bg-light);
   transform: rotateZ(180deg);
 }
 
-#options button i.icon-cog:active {
+:is(#options, #settingsDialog) button i.icon-cog:active {
   transform: translateY(1px);
 }
 
-#options button:hover i.icon-cog {
+:is(#options, #settingsDialog) button:hover i.icon-cog {
   visibility: visible;
   opacity: 1;
 }
@@ -624,7 +630,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 
-#options input[type="color"] {
+:is(#options, #settingsDialog) input[type="color"] {
   width: 4.5em;
   height: 1em;
   border: 0;
@@ -638,25 +644,25 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   cursor: pointer;
 }
 
-#options select {
+:is(#options, #settingsDialog) select {
   height: 1.5em;
   border: 0;
   cursor: pointer;
   font-size: smaller;
 }
 
-#options input[type="text"] {
+:is(#options, #settingsDialog) input[type="text"] {
   border: 0px;
   width: 62%;
   font-size: smaller;
 }
 
-#options output {
+:is(#options, #settingsDialog) output {
   text-align: right;
   font-size: smaller;
 }
 
-#options input[type="number"] {
+:is(#options, #settingsDialog) input[type="number"] {
   font-size: 0.8em;
   border: 0;
   text-align: right;
@@ -665,35 +671,35 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   width: 3.3em;
 }
 
-#options input[type="number"]::-webkit-inner-spin-button,
-#options input[type="number"]::-webkit-outer-spin-button {
+:is(#options, #settingsDialog) input[type="number"]::-webkit-inner-spin-button,
+:is(#options, #settingsDialog) input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-#options input[type="number"] {
+:is(#options, #settingsDialog) input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
 }
 
-#options input[type="number"]:hover {
+:is(#options, #settingsDialog) input[type="number"]:hover {
   outline: 1px solid var(--dark-solid);
 }
 
-#options input.paired {
+:is(#options, #settingsDialog) input.paired {
   text-align: center;
   background-color: var(--bg-fields);
   color: var(--text-dialogs);
 }
 
-#options input.long {
+:is(#options, #settingsDialog) input.long {
   width: 100%;
   background-color: var(--bg-fields);
   color: var(--text-dialogs);
   text-align: left;
 }
 
-#options input[type="range"] {
+:is(#options, #settingsDialog) input[type="range"] {
   width: 100%;
   height: 8px;
   background: 0;
@@ -703,7 +709,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 
-#options input[type="range"]::-webkit-slider-thumb {
+:is(#options, #settingsDialog) input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   border-radius: 15%;
   width: 0.91em;
@@ -715,7 +721,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   box-shadow: 0.5px 0.5px 0px var(--dark-solid);
 }
 
-#options input[type="range"]::-moz-range-thumb {
+:is(#options, #settingsDialog) input[type="range"]::-moz-range-thumb {
   -moz-appearance: none;
   border-radius: 15%;
   width: 0.73em;
@@ -726,18 +732,18 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   box-shadow: 0.5px 0.5px 0px var(--dark-solid);
 }
 
-#options input[type="range"]::-webkit-slider-runnable-track {
+:is(#options, #settingsDialog) input[type="range"]::-webkit-slider-runnable-track {
   height: 2px;
   background: #ffffff;
 }
 
-#options input[type="range"]::-moz-range-track {
+:is(#options, #settingsDialog) input[type="range"]::-moz-range-track {
   -moz-appearance: none;
   background-color: #ffffff;
   height: 2px;
 }
 
-#options select {
+:is(#options, #settingsDialog) select {
   width: 100%;
 }
 
@@ -746,7 +752,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0.4em 0.5em;
 }
 
-#options input[type="color"] {
+:is(#options, #settingsDialog) input[type="color"] {
   width: 2em;
   padding: 1px;
 }
@@ -911,7 +917,8 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   opacity: 0.9;
 }
 
-.tabcontent button {
+.tabcontent button,
+#settingsDialog .settings-actions button {
   background-color: var(--bg-lighter);
   border: none;
   padding: 0.45em 0.75em;
@@ -922,13 +929,13 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   text-overflow: ellipsis;
 }
 
-#options .tabcontent button.pressed {
+:is(#options, #settingsDialog) .tabcontent button.pressed {
   background-color: var(--header);
   font-style: italic;
   color: var(--text-header);
 }
 
-#options .tabcontent button:hover {
+:is(#options, #settingsDialog) .tabcontent button:hover {
   background-color: var(--header-active);
 }
 
@@ -943,15 +950,114 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   margin: 0.16em 0.12em;
 }
 
+#toolsContent > .grid > button {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  min-width: 0;
+  padding-inline: 0.45em;
+}
+
+#toolsContent .tool-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(#toolsContent, #layersContent) .panel-icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  font-size: 1em;
+  line-height: 1.1em;
+  text-align: center;
+  color: var(--tool-color, currentColor);
+  opacity: 0.9;
+}
+
+:is(#toolsContent, #layersContent) svg.panel-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:is(#toolsContent, #layersContent) .panel-icon::before {
+  margin: 0;
+}
+
+#layersContent .panel-category,
+#toolsContent .tools-category {
+  grid-column: 1 / -1;
+  margin: 0.5em 0.2em 0.1em;
+  font-size: 0.85em;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+#toolsContent [data-tools-group="edit"] {
+  --tool-color: #e2bf5a;
+}
+#toolsContent [data-tools-group="regenerate"] {
+  --tool-color: #3fb3a8;
+}
+#toolsContent [data-tools-group="add"] {
+  --tool-color: #6cc46c;
+}
+#toolsContent [data-tools-group="show"] {
+  --tool-color: #a98ae0;
+}
+#toolsContent [data-tools-group="create"] {
+  --tool-color: #b9cf52;
+}
+
 #mapLayers {
-  display: inline-block;
+  display: block;
   padding: 0;
   margin: 0;
   user-select: none; /* the items are re-rendered, so jQuery disableSelection cannot hold */
 }
 
+#mapLayers .layer-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25em;
+  padding: 0;
+  margin: 0;
+}
+
+#mapLayers li {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0.35em 0.45em;
+  min-width: 0;
+  text-align: left;
+  border-radius: 6px;
+  --tool-color: currentColor;
+}
+
+#mapLayers li.buttonoff .panel-icon {
+  opacity: 0.5;
+}
+
+#mapLayers .layer-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#layersContent .panel-icon {
+  opacity: 0.9;
+}
+
 #mapFilters > button {
-  width: 23%;
+  width: 31.5%;
   padding: 4px 0;
 }
 
@@ -991,7 +1097,8 @@ fieldset {
   box-shadow: 0 0 2px 2px var(--dark-solid) 17;
 }
 
-#options .tabcontent button:hover {
+:is(#options, #settingsDialog) .tabcontent button:hover,
+#settingsDialog .settings-actions button:hover {
   background-color: var(--header);
   color: var(--text-header);
 }
@@ -1030,18 +1137,18 @@ fieldset {
   vertical-align: middle;
 }
 
-#options slider-input input[type="range"] {
+:is(#options, #settingsDialog) slider-input input[type="range"] {
   flex: 1;
   min-width: 0;
   width: 0;
 }
 
-#options slider-input input[type="number"] {
+:is(#options, #settingsDialog) slider-input input[type="number"] {
   flex: 0 0 3.3em;
   min-width: 0;
 }
 
-#options select:not([multiple]):not([size]) {
+:is(#options, #settingsDialog) select:not([multiple]):not([size]) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1049,7 +1156,7 @@ fieldset {
 
 /* Separate from SVG/map font families and the map-label font catalog. */
 #options,
-#options *,
+:is(#options, #settingsDialog) *,
 #dialogs,
 #dialogs *,
 .ui-dialog.ui-widget,
@@ -1062,7 +1169,7 @@ fieldset {
   font-family: var(--ui-font);
 }
 
-#options select::picker(select),
+:is(#options, #settingsDialog) select::picker(select),
 #dialogs select::picker(select) {
   font-family: var(--ui-font);
 }
@@ -2969,20 +3076,20 @@ body.tour-free-roam * {
   box-shadow: var(--ui-window-shadow);
 }
 
-#options .tab {
+:is(#options, #settingsDialog) .tab {
   border-color: var(--ui-panel-border);
   border-radius: calc(var(--ui-window-radius) - 1px) calc(var(--ui-window-radius) - 1px) 0 0;
 }
 
-#options .tab > button {
+:is(#options, #settingsDialog) .tab > button {
   border-radius: 0;
 }
 
-#options .tab > button:first-child {
+:is(#options, #settingsDialog) .tab > button:first-child {
   border-top-left-radius: calc(var(--ui-window-radius) - 1px);
 }
 
-#options .tab > button:last-child {
+:is(#options, #settingsDialog) .tab > button:last-child {
   border-top-right-radius: calc(var(--ui-window-radius) - 1px);
 }
 
@@ -3007,8 +3114,8 @@ body.tour-free-roam * {
   border-color: var(--ui-dialog-border);
 }
 
-#options button,
-#options .tabcontent li,
+:is(#options, #settingsDialog) button,
+:is(#options, #settingsDialog) .tabcontent li,
 #dialogs button,
 #dialogs fieldset {
   border-radius: var(--ui-control-radius);
@@ -3034,9 +3141,9 @@ body.tour-free-roam * {
   background: color-mix(in srgb, var(--text-header) 20%, transparent);
 }
 
-#options input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
-#options select,
-#options textarea,
+:is(#options, #settingsDialog) input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+:is(#options, #settingsDialog) select,
+:is(#options, #settingsDialog) textarea,
 #dialogs input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 #dialogs select,
 #dialogs textarea {
@@ -3044,13 +3151,13 @@ body.tour-free-roam * {
   border-color: var(--ui-dialog-border);
 }
 
-#options input[type="color"]::-webkit-color-swatch,
+:is(#options, #settingsDialog) input[type="color"]::-webkit-color-swatch,
 #dialogs input[type="color"]::-webkit-color-swatch {
   border: 0;
   border-radius: 3px;
 }
 
-#options fieldset {
+:is(#options, #settingsDialog) fieldset {
   border-color: var(--ui-panel-border);
   border-radius: var(--ui-control-radius);
 }
@@ -3059,8 +3166,8 @@ body.tour-free-roam * {
   border-color: var(--ui-dialog-border);
 }
 
-#options .separator::before,
-#options .separator::after {
+:is(#options, #settingsDialog) .separator::before,
+:is(#options, #settingsDialog) .separator::after {
   border-color: var(--ui-panel-border);
 }
 
@@ -3069,11 +3176,11 @@ body.tour-free-roam * {
   border-color: var(--ui-dialog-border);
 }
 
-#options input[type="number"]:hover {
+:is(#options, #settingsDialog) input[type="number"]:hover {
   outline-color: var(--ui-panel-border);
 }
 
-#options :is(button, input, select, textarea, a):focus-visible {
+:is(#options, #settingsDialog) :is(button, input, select, textarea, a):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--text-light) 55%, transparent);
   outline-offset: 2px;
 }
@@ -3087,7 +3194,7 @@ body.tour-free-roam * {
   outline-color: var(--text-header);
 }
 
-#options .checkbox + .checkbox-label::before,
+:is(#options, #settingsDialog) .checkbox + .checkbox-label::before,
 #dialogs .checkbox + .checkbox-label::before {
   border-color: var(--ui-dialog-border);
   border-radius: 3px;
@@ -3133,7 +3240,7 @@ body.tour-free-roam * {
 }
 
 /* Shared control surfaces; native values, events and keyboard interaction remain intact. */
-#options select,
+:is(#options, #settingsDialog) select,
 #dialogs select {
   font-family: var(--sans-serif);
   padding-inline: 6px;
@@ -3141,14 +3248,14 @@ body.tour-free-roam * {
 }
 
 @supports (appearance: base-select) {
-  #options select:not([multiple]):not([size]),
+  :is(#options, #settingsDialog) select:not([multiple]):not([size]),
   #dialogs select:not([multiple]):not([size]),
-  #options select:not([multiple]):not([size])::picker(select),
+  :is(#options, #settingsDialog) select:not([multiple]):not([size])::picker(select),
   #dialogs select:not([multiple]):not([size])::picker(select) {
     appearance: base-select;
   }
 
-  #options select:not([multiple]):not([size]),
+  :is(#options, #settingsDialog) select:not([multiple]):not([size]),
   #dialogs select:not([multiple]):not([size]) {
     align-items: center;
     min-height: 0;
@@ -3157,7 +3264,7 @@ body.tour-free-roam * {
     line-height: normal;
   }
 
-  #options select::picker(select),
+  :is(#options, #settingsDialog) select::picker(select),
   #dialogs select::picker(select) {
     background: var(--bg-fields);
     color: var(--text-dialogs);
@@ -3173,19 +3280,19 @@ body.tour-free-roam * {
     scrollbar-width: thin;
   }
 
-  #options select::picker-icon,
+  :is(#options, #settingsDialog) select::picker-icon,
   #dialogs select::picker-icon {
     opacity: 0.6;
     font-size: 0.8em;
     margin-inline-start: 4px;
   }
 
-  #options select:open::picker-icon,
+  :is(#options, #settingsDialog) select:open::picker-icon,
   #dialogs select:open::picker-icon {
     rotate: 180deg;
   }
 
-  #options select:not([multiple]):not([size]) option,
+  :is(#options, #settingsDialog) select:not([multiple]):not([size]) option,
   #dialogs select:not([multiple]):not([size]) option {
     box-sizing: border-box;
     min-height: 0;
@@ -3199,24 +3306,24 @@ body.tour-free-roam * {
     outline-offset: -2px;
   }
 
-  #options select:not(#styleSelectFont) option,
+  :is(#options, #settingsDialog) select:not(#styleSelectFont) option,
   #dialogs select option {
     font-size: max(12px, 1em);
   }
 
-  #options select option:checked,
+  :is(#options, #settingsDialog) select option:checked,
   #dialogs select option:checked {
     background: color-mix(in srgb, var(--text-dialogs) 12%, var(--bg-fields));
   }
 
-  #options select option:hover,
-  #options select option:focus-visible,
+  :is(#options, #settingsDialog) select option:hover,
+  :is(#options, #settingsDialog) select option:focus-visible,
   #dialogs select option:hover,
   #dialogs select option:focus-visible {
     background: color-mix(in srgb, var(--text-dialogs) 8%, var(--bg-fields));
   }
 
-  #options select option::checkmark,
+  :is(#options, #settingsDialog) select option::checkmark,
   #dialogs select option::checkmark {
     color: var(--text-dialogs);
     opacity: 0.7;
@@ -3236,7 +3343,7 @@ body.tour-free-roam * {
 }
 
 input[type="range"],
-#options input[type="range"],
+:is(#options, #settingsDialog) input[type="range"],
 #dialogs input[type="range"] {
   appearance: none;
   height: 16px;
@@ -3249,7 +3356,7 @@ input[type="range"],
 }
 
 input[type="range"]::-webkit-slider-runnable-track,
-#options input[type="range"]::-webkit-slider-runnable-track,
+:is(#options, #settingsDialog) input[type="range"]::-webkit-slider-runnable-track,
 #dialogs input[type="range"]::-webkit-slider-runnable-track {
   height: 3px;
   border: 0;
@@ -3258,7 +3365,7 @@ input[type="range"]::-webkit-slider-runnable-track,
 }
 
 input[type="range"]::-moz-range-track,
-#options input[type="range"]::-moz-range-track,
+:is(#options, #settingsDialog) input[type="range"]::-moz-range-track,
 #dialogs input[type="range"]::-moz-range-track {
   height: 3px;
   border: 0;
@@ -3267,7 +3374,7 @@ input[type="range"]::-moz-range-track,
 }
 
 input[type="range"]::-webkit-slider-thumb,
-#options input[type="range"]::-webkit-slider-thumb,
+:is(#options, #settingsDialog) input[type="range"]::-webkit-slider-thumb,
 #dialogs input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   box-sizing: border-box;
@@ -3282,7 +3389,7 @@ input[type="range"]::-webkit-slider-thumb,
 }
 
 input[type="range"]::-moz-range-thumb,
-#options input[type="range"]::-moz-range-thumb,
+:is(#options, #settingsDialog) input[type="range"]::-moz-range-thumb,
 #dialogs input[type="range"]::-moz-range-thumb {
   box-sizing: border-box;
   width: 12px;
@@ -3295,7 +3402,7 @@ input[type="range"]::-moz-range-thumb,
 }
 
 input[type="range"]:disabled,
-#options input[type="range"]:disabled,
+:is(#options, #settingsDialog) input[type="range"]:disabled,
 #dialogs input[type="range"]:disabled {
   opacity: 0.35;
   cursor: default;
@@ -3308,7 +3415,7 @@ input[type="range"]:disabled,
 
 /* Native scrollbars must use the standards property as well as the WebKit fallback. */
 #options,
-#options *,
+:is(#options, #settingsDialog) *,
 #dialogs,
 #dialogs *,
 #fileToolbar,
@@ -3317,30 +3424,30 @@ input[type="range"]:disabled,
   scrollbar-color: var(--control-color) transparent;
 }
 
-#options ::-webkit-scrollbar,
+:is(#options, #settingsDialog) ::-webkit-scrollbar,
 #dialogs ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
   background: transparent;
 }
 
-#options ::-webkit-scrollbar-thumb,
+:is(#options, #settingsDialog) ::-webkit-scrollbar-thumb,
 #dialogs ::-webkit-scrollbar-thumb {
   border-radius: 99px;
   background: var(--control-color);
 }
 
-#options ::-webkit-scrollbar-thumb:hover,
+:is(#options, #settingsDialog) ::-webkit-scrollbar-thumb:hover,
 #dialogs ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--control-color) 80%, var(--control-ink));
 }
 
-#options ::-webkit-scrollbar-button,
+:is(#options, #settingsDialog) ::-webkit-scrollbar-button,
 #dialogs ::-webkit-scrollbar-button {
   display: none;
 }
 
-#options ::-webkit-scrollbar-corner,
+:is(#options, #settingsDialog) ::-webkit-scrollbar-corner,
 #dialogs ::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -3385,16 +3492,16 @@ div.slider .ui-slider-handle {
 }
 
 /* Explicit control rules override legacy monospace/widget defaults, not icon pseudo-elements. */
-#options input,
-#options select,
-#options button,
+:is(#options, #settingsDialog) input,
+:is(#options, #settingsDialog) select,
+:is(#options, #settingsDialog) button,
 #dialogs input,
 #dialogs select,
 #dialogs button,
 #dialogs textarea,
-#options select:not([multiple]):not([size]) option,
+:is(#options, #settingsDialog) select:not([multiple]):not([size]) option,
 #dialogs select:not([multiple]):not([size]) option,
-#options select::picker(select),
+:is(#options, #settingsDialog) select::picker(select),
 #dialogs select::picker(select) {
   font-family: var(--ui-font);
 }
@@ -3434,4 +3541,196 @@ div.slider .ui-slider-handle {
   #optionsContent select::picker-icon {
     flex-shrink: 0;
   }
+}
+
+#viewbox.ocean-baked #ocean > :not(#oceanBaked),
+#viewbox.ocean-baked #oceanHeights {
+  display: none;
+}
+
+#map.map-moving #viewbox [filter] {
+  filter: none !important;
+}
+
+#settingsDialog {
+  position: fixed;
+  top: 1em;
+  right: 1em;
+  z-index: 50; /* below jQuery dialogs (100) opened from it */
+  font-family: var(--monospace);
+}
+
+#settingsDialog[hidden] {
+  display: none;
+}
+
+#settingsDialog .settings-window {
+  display: flex;
+  flex-direction: column;
+  width: min(46em, calc(100vw - 2em));
+  max-height: calc(100vh - 2em);
+  background: var(--bg-light);
+  color: var(--text-light);
+  border: 1px solid var(--ui-panel-border);
+  border-radius: var(--ui-window-radius);
+  box-shadow: var(--ui-window-shadow);
+  overflow: hidden;
+}
+
+#settingsDialog .settings-header {
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6em 0.8em 0.6em 1.2em;
+  background: var(--header);
+  color: var(--text-header);
+}
+
+#settingsDialog .settings-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+#settingsDialog #settingsClose {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.1em;
+  padding: 0.2em 0.5em;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#settingsDialog #settingsClose:hover {
+  background: var(--header-active);
+}
+
+#settingsDialog .settings-body {
+  display: grid;
+  grid-template-columns: 10em 1fr;
+  min-height: 0;
+  flex: 1;
+}
+
+#settingsDialog .settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  padding: 0.8em 0.5em;
+  background: var(--bg-main);
+  border-right: 1px solid var(--dark-solid);
+}
+
+#settingsDialog .settings-nav button {
+  text-align: left;
+  padding: 0.55em 0.8em;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#settingsDialog .settings-nav button:hover {
+  background: var(--header-active);
+  color: var(--text-header-active);
+}
+
+#settingsDialog .settings-nav button.active {
+  background: var(--header);
+  color: var(--text-header);
+}
+
+#settingsDialog .settings-pages {
+  overflow-y: auto;
+  padding: 0.4em 1em 1em;
+}
+
+#settingsDialog .settings-pages p {
+  font-style: normal;
+}
+
+#settingsDialog .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.8em;
+}
+
+@media (max-width: 600px) {
+  #settingsDialog .settings-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  #settingsDialog .settings-nav {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--dark-solid);
+  }
+}
+
+#toolsContent .tools-tabs {
+  display: flex;
+  gap: 0.2em;
+  margin: 0.5em 0 0.4em;
+  padding: 0.2em;
+  border-radius: 8px;
+  background: var(--bg-main);
+}
+
+#toolsContent .tools-tabs button {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2em;
+  margin: 0;
+  padding: 0.35em 0.15em;
+  border-radius: 6px;
+  background: none;
+  color: var(--tool-color);
+  font-weight: bold;
+  font-size: 0.82em;
+}
+
+#toolsContent .tools-tabs svg {
+  width: 1.4em;
+  height: 1.4em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#toolsContent .tools-tabs button:hover {
+  background: color-mix(in srgb, var(--tool-color) 22%, transparent);
+  color: var(--tool-color);
+}
+
+#toolsContent .tools-tabs button.active {
+  background: var(--tool-color);
+  color: #1d1d24;
+}
+
+#toolsContent [data-tools-tab="edit"] {
+  --tool-color: #e2bf5a;
+}
+#toolsContent [data-tools-tab="regenerate"] {
+  --tool-color: #3fb3a8;
+}
+#toolsContent [data-tools-tab="add"] {
+  --tool-color: #6cc46c;
+}
+#toolsContent [data-tools-tab="show"] {
+  --tool-color: #a98ae0;
+}
+#toolsContent [data-tools-tab="create"] {
+  --tool-color: #b9cf52;
+}
+
+#toolsContent > .grid[hidden] {
+  display: none;
 }

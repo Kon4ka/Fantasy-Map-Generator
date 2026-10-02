@@ -1,5 +1,6 @@
-// Quality traded for speed: three independent settings, and the presets that name common combinations
+// Quality traded for speed: independent settings, and the presets that name common combinations
 import { Layers } from "@/components/layers";
+import { OceanBake } from "@/components/ocean-bake";
 import type { OptionsData } from "@/components/options-schema";
 import { findEl } from "@/utils/nodeUtils";
 
@@ -7,9 +8,27 @@ export type PerformanceSettings = OptionsData["app"]["performance"];
 export type PerformancePreset = keyof typeof PERFORMANCE_PRESETS;
 
 export const PERFORMANCE_PRESETS = {
-  quality: { shapeRendering: "geometricPrecision", stateHalos: true, viewportRedraw: "continuous" },
-  balance: { shapeRendering: "optimizeSpeed", stateHalos: false, viewportRedraw: "continuous" },
-  speed: { shapeRendering: "optimizeSpeed", stateHalos: false, viewportRedraw: "settled" }
+  quality: {
+    shapeRendering: "geometricPrecision",
+    stateHalos: true,
+    viewportRedraw: "continuous",
+    motionFilters: true,
+    oceanBake: false
+  },
+  balance: {
+    shapeRendering: "optimizeSpeed",
+    stateHalos: false,
+    viewportRedraw: "continuous",
+    motionFilters: true,
+    oceanBake: false
+  },
+  speed: {
+    shapeRendering: "optimizeSpeed",
+    stateHalos: false,
+    viewportRedraw: "settled",
+    motionFilters: false,
+    oceanBake: true
+  }
 } as const satisfies Record<string, PerformanceSettings>;
 
 /** The preset the settings amount to. Derived, never stored: a preset is a name for its values */
@@ -47,10 +66,11 @@ function change(write: (o: OptionsData) => void): void {
   for (const listener of listeners) listener();
 }
 
-/** Put the settings onto the map on screen. `viewportRedraw` needs nothing: the zoom reads it live */
+/** Put the settings onto the map on screen. `viewportRedraw` and `motionFilters` need nothing: the zoom reads them live */
 export function applyPerformanceSettings(): void {
-  const { shapeRendering, stateHalos } = options.app.performance;
+  const { shapeRendering, stateHalos, oceanBake } = options.app.performance;
   findEl("viewbox")?.setAttribute("shape-rendering", shapeRendering);
+  OceanBake.setEnabled(oceanBake);
 
   const halo = findEl("statesHalo");
   if (!halo) return;

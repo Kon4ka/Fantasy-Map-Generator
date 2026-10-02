@@ -37,7 +37,10 @@ const EXCLUDED_SELECTOR = [
 
 const compiledPatterns = ruLocale.patterns.map(({ source, target }) => ({ expression: new RegExp(source), target }));
 const dataMessages = new Map(
-  Object.entries(ruLocale.dataMessages ?? {}).map(([source, target]) => [normalize(source).toLocaleLowerCase("en"), target])
+  Object.entries(ruLocale.dataMessages ?? {}).map(([source, target]) => [
+    normalize(source).toLocaleLowerCase("en"),
+    target
+  ])
 );
 const sourceText = new WeakMap<Text, string>();
 const appliedText = new WeakMap<Text, string>();
@@ -108,9 +111,7 @@ export function translateDataTerm(source: string): string {
   if (locale === "en") return source;
   const normalized = normalize(source);
   if (!normalized) return source;
-  return (
-    dataMessages.get(normalized.toLocaleLowerCase("en")) ?? ruLocale.messages[normalized] ?? source
-  );
+  return dataMessages.get(normalized.toLocaleLowerCase("en")) ?? ruLocale.messages[normalized] ?? source;
 }
 
 function translateTextNode(node: Text): void {

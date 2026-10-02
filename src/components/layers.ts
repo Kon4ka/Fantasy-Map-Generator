@@ -312,8 +312,6 @@ const mapLayers = [
     children: [{ id: "compassRose", tag: "use", attrs: { href: "#defs-compass-rose" } }]
   }),
   new Layer({ id: "rivers", parent: "viewbox", draw: drawRivers, erase: removeRivers }),
-  new Layer({ id: "ice", parent: "viewbox", draw: drawIce }),
-  new Layer({ id: "relief", element: "terrain", parent: "viewbox", draw: drawRelief, erase: removeRelief }),
   new Layer({ id: "religions", element: "relig", parent: "viewbox", draw: drawReligions }),
   new Layer({ id: "cultures", element: "cults", parent: "viewbox", draw: drawCultures }),
   new Layer({
@@ -347,6 +345,8 @@ const mapLayers = [
     keepContent: true,
     draw: drawCoastline
   }),
+  new Layer({ id: "ice", parent: "viewbox", draw: drawIce }),
+  new Layer({ id: "relief", element: "terrain", parent: "viewbox", draw: drawRelief, erase: removeRelief }),
   new Layer({
     id: "goods",
     parent: "viewbox",
@@ -428,14 +428,35 @@ declare global {
 // biome-ignore lint/suspicious/noRedeclare: legacy seam for public/modules/**/*.js
 export const Layers = new LayersRegistry(mapLayers);
 
-/** Upgrade presentation only; old maps retain their combined elevation/depth visibility. */
+/** Keep ice above filled overlays and relief above ice; preserve active flags and legacy depths. */
 export function restoreMapLayers(state: LayersState): void {
   const order = [...state.order];
-  const ice = order.indexOf("ice");
+  const backgrounds = new Set([
+    "landmass",
+    "texture",
+    "oceanDepths",
+    "heightmap",
+    "lakes",
+    "biomes",
+    "cells",
+    "religions",
+    "cultures",
+    "states",
+    "provinces",
+    "zones",
+    "temperature"
+  ]);
+  let ice = order.indexOf("ice");
+  const background = order.findLastIndex(id => backgrounds.has(id));
+  if (ice !== -1 && ice < background) {
+    order.splice(ice, 1);
+    order.splice(background, 0, "ice");
+    ice = background;
+  }
   const relief = order.indexOf("relief");
   if (ice !== -1 && relief !== -1 && ice > relief) {
-    order.splice(ice, 1);
-    order.splice(relief, 0, "ice");
+    order.splice(relief, 1);
+    order.splice(ice, 0, "relief");
   }
   const active = [...state.active];
   if (!order.includes("oceanDepths") && active.includes("heightmap") && styles.heightmap.oceanHeights.options.render)

@@ -13,6 +13,7 @@ import {
   showSavePane
 } from "@/components/options/io-panes";
 import { openTab, toggleOptions } from "@/components/options/options-panel";
+import { SettingsDialog } from "@/components/options/settings-dialog";
 import { LAYER_PRESETS, LAYER_TOGGLES } from "@/components/options/tabs/layers-tab";
 import { showSeedHistoryDialog } from "@/components/seed";
 import { tip } from "@/components/tooltips";
@@ -501,9 +502,9 @@ export const MAP_COMMANDS: MapCommand[] = [
   { id: "toggleOptions", name: "Toggle Menu", aliases: "options panel show hide", run: () => toggleOptions() },
   { id: "layersTab", name: "Open Layers Tab", aliases: "menu panel", run: () => openTab("layersTab") },
   { id: "styleTab", name: "Open Style Tab", aliases: "menu panel editor", run: () => openTab("styleTab") },
-  { id: "optionsTab", name: "Open Options Tab", aliases: "menu panel settings", run: () => openTab("optionsTab") },
+  { id: "optionsTab", name: "Open Settings", aliases: "menu options settings", run: () => SettingsDialog.open("map") },
   { id: "toolsTab", name: "Open Tools Tab", aliases: "menu panel", run: () => openTab("toolsTab") },
-  { id: "aboutTab", name: "Open About Tab", aliases: "menu panel info credits", run: () => openTab("aboutTab") },
+  { id: "aboutTab", name: "Open About", aliases: "menu info credits", run: () => SettingsDialog.open("about") },
   {
     id: "exportSvg",
     name: "Export as SVG",

@@ -2,6 +2,8 @@ Azgaar's Fantasy Map Generator is a web application for procedurally generating,
 
 For Kontar Edition work, read `DEVLOG.md` before starting and update it after every material change.
 
+For AI operation of Kontar maps or MCP integration, read `docs/ai-mcp-guide.md`. There is currently no implemented MCP server; do not present internal browser/file bridges as MCP tools.
+
 For deeper knowledge, consult the `docs/` directory, especially `docs/domain/glossary.md`, `docs/architecture/architecture.md` and `docs/architecture/data-model.md`.
 
 Keep comments short and to the point. Don't repeat information that is in docs. Prefer one-liners or no comments.

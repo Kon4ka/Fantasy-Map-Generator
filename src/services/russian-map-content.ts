@@ -173,7 +173,8 @@ function localizeNameBases(): boolean {
     const sourceNames = base.b.split(",");
     const names = sourceNames.map(transliterateToRussian);
     const duplication = transliterateToRussian(base.d).toLocaleLowerCase("ru");
-    if (name === base.name && names.every((value, index) => value === sourceNames[index]) && duplication === base.d) continue;
+    if (name === base.name && names.every((value, index) => value === sourceNames[index]) && duplication === base.d)
+      continue;
     base.name = name;
     base.b = names.join(",");
     base.d = duplication;
