@@ -10,7 +10,7 @@ Adapt Azgaar's Fantasy Map Generator for the world of Kontar: Russian-first UI, 
 
 ## Repository
 
-- Path: `D:\Programming\AI\Fantasy-Map-Generator`
+- Fork: `https://github.com/Kon4ka/Fantasy-Map-Generator`
 - Upstream: `https://github.com/Azgaar/Fantasy-Map-Generator.git`
 - Clean upstream branch: `master`, tracks `upstream/master`
 - Working branch: `codex/kontar-edition`

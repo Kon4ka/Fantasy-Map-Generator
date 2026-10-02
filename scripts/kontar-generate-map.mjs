@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
@@ -9,14 +10,14 @@ const worldDir = path.join(root, "worlds", "kontar");
 const referenceDir = path.join(worldDir, "reference");
 const previewDir =
   process.env.KONTAR_PREVIEW_DIR ??
-  path.join("C:", "Users", "Kon4ka", ".codex", "visualizations", "2026", "09", "30", "01a0f1cb-0c5e-7203-87d8-c17649fb2861");
+  path.join(os.tmpdir(), "kontar-previews");
 
 await fs.mkdir(referenceDir, { recursive: true });
 await fs.mkdir(previewDir, { recursive: true });
 
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe"
+  ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" })
 });
 
 const page = await browser.newPage({ viewport: { width: 1500, height: 1050 }, deviceScaleFactor: 1 });

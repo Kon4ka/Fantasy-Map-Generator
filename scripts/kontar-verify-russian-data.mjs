@@ -6,11 +6,11 @@ import { chromium } from "playwright";
 const root = process.cwd();
 const appUrl = process.env.KONTAR_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
 const mapPath = path.join(root, "worlds", "kontar", "kontar-first-rift-draft.map");
-const browserPath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const browserOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" };
 
 if (!fs.existsSync(mapPath)) throw new Error(`Не найдена карта: ${mapPath}`);
 
-const browser = await chromium.launch({ headless: true, executablePath: browserPath });
+const browser = await chromium.launch({ headless: true, ...browserOptions });
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
 try {

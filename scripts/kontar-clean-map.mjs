@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 
 const root = path.resolve(import.meta.dirname, "..");
 const appUrl = process.env.KONTAR_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
-const browserPath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const browserOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" };
 const inputPath = path.resolve(process.argv[2] ?? "");
 const outputPath = path.resolve(process.argv[3] ?? "");
 
@@ -48,7 +48,7 @@ try {
   }
 
   await waitForServer();
-  browser = await chromium.launch({ headless: true, executablePath: browserPath });
+  browser = await chromium.launch({ headless: true, ...browserOptions });
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   await page.addInitScript(() => localStorage.setItem("version", "99.99.99"));
   await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
