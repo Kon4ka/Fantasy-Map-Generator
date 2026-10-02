@@ -2,7 +2,7 @@ Azgaar's Fantasy Map Generator is a web application for procedurally generating,
 
 For Kontar Edition work, read `DEVLOG.md` before starting and update it after every material change.
 
-For AI operation of maps or MCP integration, read `docs/ai-mcp-guide.md`. The `fantasy-map` MCP server (`.mcp.json`) reads the open map and applies whitelisted edits with preview and undo; do not present other browser/file bridges as MCP tools.
+For AI operation of maps or MCP integration, read `docs/ai-mcp-guide.md`. The `fantasy-map` MCP server (`.mcp.json`) reads, edits (preview + undo), regenerates, saves and opens maps (background sessions included); do not present other browser/file bridges as MCP tools.
 
 For deeper knowledge, consult the `docs/` directory, especially `docs/domain/glossary.md`, `docs/architecture/architecture.md` and `docs/architecture/data-model.md`.
 

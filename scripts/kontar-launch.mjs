@@ -12,6 +12,9 @@ const logDir = path.join(process.env.LOCALAPPDATA ?? root, "Kontar");
 const logPath = path.join(logDir, "launcher.log");
 const dryRun = process.argv.includes("--dry-run");
 const testRun = process.argv.includes("--test");
+const headless = process.argv.includes("--headless"); // background session for the AI agent, no window
+const mapArgument = process.argv[process.argv.indexOf("--map") + 1];
+const requestedMap = process.argv.includes("--map") && mapArgument ? path.resolve(mapArgument) : undefined;
 
 fs.mkdirSync(logDir, { recursive: true });
 const logStream = fs.createWriteStream(logPath, { flags: "a" });
@@ -24,7 +27,7 @@ const log = message => {
 const fail = error => {
   const message = error instanceof Error ? error.stack ?? error.message : String(error);
   log(`ERROR ${message}`);
-  if (testRun) return;
+  if (testRun || headless) return;
   const escaped = message.replaceAll("'", "''");
   spawnSync(
     "powershell.exe",
@@ -142,9 +145,9 @@ let context;
 let agentBridge;
 
 try {
-  const mapPath = getLatestMapPath();
+  const mapPath = requestedMap ?? getLatestMapPath();
   if (!fs.existsSync(mapPath)) throw new Error(`Не найдена карта: ${mapPath}`);
-  const screen = getTargetScreen();
+  const screen = headless ? { DeviceName: "headless", X: 0, Y: 0, Width: 1600, Height: 1000 } : getTargetScreen();
   const browserPath = getBrowserPath();
   log(`Экран: ${screen.DeviceName} ${screen.Width}x${screen.Height} @ ${screen.X},${screen.Y}`);
   log(`Карта: ${mapPath}`);
@@ -172,10 +175,11 @@ try {
     }
 
     await waitForServer();
-    const profilePath = path.join(logDir, testRun ? "test-browser-profile" : "browser-profile");
+    const profileName = testRun ? "test-browser-profile" : headless ? "agent-browser-profile" : "browser-profile";
+    const profilePath = path.join(logDir, profileName);
     const launchContext = () =>
       chromium.launchPersistentContext(profilePath, {
-        headless: testRun,
+        headless: testRun || headless,
         chromiumSandbox: true,
         executablePath: browserPath,
         viewport: null,
@@ -233,13 +237,18 @@ try {
     const mapsBeforeLoad = await page.evaluate(() => mapHistory.length);
     await page.locator("#mapToLoad").setInputFiles(mapPath);
     await page.waitForFunction(
-      previousCount => mapHistory.length > previousCount && options.map.lore.name === "Контар после Первого раскола",
-      mapsBeforeLoad,
+      ([previousCount, anyMap]) =>
+        mapHistory.length > previousCount && (anyMap || options.map.lore.name === "Контар после Первого раскола"),
+      [mapsBeforeLoad, Boolean(requestedMap)],
       { timeout: 120_000 }
     );
     await page.bringToFront();
     log("Карта Контара открыта");
-    if (!testRun) agentBridge = await startAgentBridge(page, path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json"), log);
+    if (!testRun) {
+      const roots = [path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds")];
+      const infoPath = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json");
+      agentBridge = await startAgentBridge(page, infoPath, log, { roots, headless, shutdown: () => context.close() });
+    }
 
     if (testRun) {
       await page.evaluate(() => {

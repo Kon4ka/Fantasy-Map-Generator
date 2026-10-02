@@ -67,7 +67,8 @@ export class MapFileSession {
   async save(
     data: string,
     suggestedName: string,
-    saveAs = false
+    saveAs = false,
+    chosenName?: string // skips the name prompt (agent saves)
   ): Promise<{ name: string; downloaded: boolean } | null> {
     const revision = this.revision;
     await this.association;
@@ -78,7 +79,7 @@ export class MapFileSession {
 
     if (!target && !handle) {
       if (this.platform.bridge) {
-        const chosen = await this.platform.askName(name);
+        const chosen = chosenName ?? (await this.platform.askName(name));
         if (!chosen || revision !== this.revision) return null;
         target = await this.platform.bridge.saveAs(chosen, data);
       } else if (this.platform.pickSave) {
@@ -86,7 +87,7 @@ export class MapFileSession {
         handle = await this.platform.pickSave(suggested);
         if (revision !== this.revision) return null;
       } else {
-        const chosen = await this.platform.askName(name);
+        const chosen = chosenName ?? (await this.platform.askName(name));
         if (!chosen || revision !== this.revision) return null;
         this.platform.download(data, chosen);
         return { name: chosen, downloaded: true };

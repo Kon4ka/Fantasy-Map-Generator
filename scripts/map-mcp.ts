@@ -1,4 +1,5 @@
 // MCP server (stdio) for AI work with the open map. Talks to the launcher's agent bridge. See docs/ai-mcp-guide.md
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -10,7 +11,9 @@ type CallAgent = (method: string, args: Json) => Promise<unknown>;
 
 const root = path.resolve(import.meta.dirname, "..");
 const INFO_PATH = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json");
-const NOT_RUNNING = "The map editor bridge is not running. Ask the user to start the map launcher, then retry.";
+const LAUNCHER = path.join(root, "scripts", "kontar-launch.mjs");
+const NOT_RUNNING =
+  "No map is open. Use world_open with a .map path to open one in the background, or ask the user to start the map launcher.";
 
 const where = { type: "object", description: "{field: value | {like, gt, lt, in, ne}}; refs compare by id" };
 const fields = { type: "array", items: { type: "string" } };
@@ -99,6 +102,32 @@ const TOOLS = [
     }
   },
   {
+    name: "world_save",
+    method: "save",
+    description: "Save to the map's file; mode saveAs (or a map without a file) needs name.",
+    inputSchema: {
+      type: "object",
+      properties: { mode: { type: "string", enum: ["save", "saveAs"] }, name: { type: "string" } }
+    }
+  },
+  {
+    name: "world_open",
+    method: "open",
+    description:
+      "Open a .map from the worlds folder or Downloads. With no map open, starts a background session. Replacing an open map needs confirm:true.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" }, confirm: { type: "boolean" } },
+      required: ["path"]
+    }
+  },
+  {
+    name: "world_close",
+    method: "shutdown",
+    description: "Close a background session started by world_open.",
+    inputSchema: { type: "object", properties: {} }
+  },
+  {
     name: "world_undo",
     method: "undo",
     description: "Revert the last applied batches (up to 5). Refuses if the map changed since, unless force.",
@@ -107,7 +136,7 @@ const TOOLS = [
 ];
 
 /** Read the bridge address on every call: the launcher may have restarted with a new port and token */
-export const callBridge: CallAgent = async (method, args) => {
+async function post(method: string, args: Json): Promise<unknown> {
   let info: { port: number; token: string };
   try {
     info = JSON.parse(fs.readFileSync(INFO_PATH, "utf8"));
@@ -119,15 +148,55 @@ export const callBridge: CallAgent = async (method, args) => {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${info.token}` },
       body: JSON.stringify({ method, args }),
-      signal: AbortSignal.timeout(60_000)
+      signal: AbortSignal.timeout(180_000)
     });
     return await response.json();
   } catch {
     return { error: NOT_RUNNING };
   }
-};
+}
 
-const hasError = (value: unknown) => typeof value === "object" && value !== null && "error" in value;
+const isError = (value: unknown): value is { error: string } =>
+  typeof value === "object" && value !== null && "error" in value;
+
+function downloadsFolder(): string {
+  const command = "(New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path";
+  const result =
+    process.platform === "win32" ? spawnSync("powershell.exe", ["-NoProfile", "-Command", command], { encoding: "utf8" }) : null;
+  return result?.stdout?.trim() || path.join(process.env.USERPROFILE ?? process.env.HOME ?? root, "Downloads");
+}
+
+/** Open in the running editor, or start a background one on that file */
+async function openWorld(args: Json): Promise<unknown> {
+  const open = await post("status", {});
+  if (!isError(open) || !String(open.error).startsWith("No map is open")) {
+    if (args.confirm !== true) {
+      return {
+        confirmNeeded: `this replaces the open map ${JSON.stringify((open as Json).map)}; unsaved changes are lost. Repeat with confirm: true`
+      };
+    }
+    return post("open", { path: args.path });
+  }
+
+  const file = path.resolve(String(args.path ?? ""));
+  const roots = [path.join(root, "worlds"), downloadsFolder()];
+  const inside = roots.some(folder => !path.relative(folder, file).startsWith("..") && !path.isAbsolute(path.relative(folder, file)));
+  if (!/\.(map|gz)$/i.test(file) || !inside || !fs.existsSync(file)) {
+    return { error: `path must be an existing .map in: ${roots.join(", ")}` };
+  }
+  fs.rmSync(INFO_PATH, { force: true });
+  spawn(process.execPath, [LAUNCHER, "--headless", "--map", file], { cwd: root, detached: true, stdio: "ignore", windowsHide: true }).unref();
+  for (const end = Date.now() + 180_000; Date.now() < end; ) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!fs.existsSync(INFO_PATH)) continue;
+    const status = await post("status", {});
+    if (!isError(status)) return { opened: file, background: true, ...(status as Json) };
+  }
+  return { error: "the background session did not start in 3 minutes; see %LOCALAPPDATA%/Kontar/launcher.log" };
+}
+
+export const callBridge: CallAgent = (method, args) => (method === "open" ? openWorld(args) : post(method, args));
+
 
 /** One JSON-RPC message in, one reply out (undefined for notifications) */
 export async function handle(message: Json, callAgent: CallAgent = callBridge): Promise<Json | undefined> {
@@ -142,7 +211,7 @@ export async function handle(message: Json, callAgent: CallAgent = callBridge): 
         capabilities: { tools: {} },
         serverInfo: { name: "fantasy-map", version: "0.1.0" },
         instructions:
-          "Read and edit the open map. Start with world_status; answers are compact tables. Edits: preview with world_apply, then apply with the returned revision; world_undo reverts."
+          "Read and edit the open map. Start with world_status; answers are compact tables. Edits: preview with world_apply or world_generate, then apply with the returned revision; world_undo reverts; world_save writes the file."
       });
     case "ping":
       return reply({});
@@ -152,7 +221,7 @@ export async function handle(message: Json, callAgent: CallAgent = callBridge): 
       const tool = TOOLS.find(tool => tool.name === params.name);
       if (!tool) return { jsonrpc: "2.0", id, error: { code: -32602, message: `unknown tool ${params.name}` } };
       const result = await callAgent(tool.method, (params.arguments as Json) ?? {});
-      return reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: hasError(result) });
+      return reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: isError(result) });
     }
     default:
       return { jsonrpc: "2.0", id, error: { code: -32601, message: `method ${method} not found` } };

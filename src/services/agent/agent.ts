@@ -164,6 +164,22 @@ const waitFor = async (done: () => boolean, timeout: number) => {
   }
 };
 
+/** Write the map to its file, or to a new file named by the agent (saveAs) */
+async function save(args: { mode?: string; name?: string }) {
+  if (customization) return { error: "the map is in an edit mode; finish it in the editor first" };
+  const saveAs = args.mode === "saveAs";
+  if (args.name !== undefined && (typeof args.name !== "string" || !/^[^<>:"/\\|?*]{1,120}$/.test(args.name))) {
+    return { error: "name must be a plain file name" };
+  }
+  if ((saveAs || !MapFiles.name) && !args.name)
+    return { error: "pass name: the map has no file yet or saveAs needs one" };
+  const name = args.name && !/\.(map|gz)$/i.test(args.name) ? `${args.name}.map` : args.name;
+  const result = await MapFiles.save(await serialize(), `${options.map.lore.name}.map`, saveAs, name);
+  if (!result) return { error: "save was cancelled" };
+  window.dispatchEvent(new Event("map:file-saved"));
+  return { saved: result.name, downloaded: result.downloaded };
+}
+
 /** Regenerate one part of the world, or the whole map (scope "map") */
 async function generate(args: {
   scope?: string;
@@ -233,7 +249,7 @@ function schema(args: { type?: string } = {}) {
       types: [...ENTITY_TYPES, "layer"],
       pseudo: { lore: "world_get type=lore: name, description, calendar" },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
-      methods: ["status", "schema", "query", "get", "apply", "undo", "generate"],
+      methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save"],
       ops: OPERATIONS
     };
   }
@@ -277,7 +293,7 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate };
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save };
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
 async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {

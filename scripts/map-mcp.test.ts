@@ -24,7 +24,7 @@ test("tools/list hides the bridge method names", async () => {
   const tools = (answer?.result as { tools: Record<string, unknown>[] }).tools;
   assert.deepEqual(
     tools.map(tool => tool.name),
-    ["world_status", "world_schema", "world_query", "world_get", "world_apply", "world_generate", "world_undo"]
+    ["world_status", "world_schema", "world_query", "world_get", "world_apply", "world_generate", "world_save", "world_open", "world_close", "world_undo"]
   );
   assert.ok(tools.every(tool => !("method" in tool)));
 });
@@ -69,4 +69,15 @@ test("the bridge needs the token and allows only agent methods", async () => {
     bridge.close();
   }
   assert.equal(fs.existsSync(infoPath), false);
+});
+
+test("open accepts only existing .map files inside the allowed folders", async () => {
+  const { checkMapPath } = await import("./map-agent-bridge.ts");
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), "map-roots-"));
+  const map = path.join(folder, "world.map");
+  fs.writeFileSync(map, "");
+  assert.equal(checkMapPath(map, [folder]), map);
+  assert.throws(() => checkMapPath(path.join(folder, "notes.txt"), [folder]), /only \.map/);
+  assert.throws(() => checkMapPath(map, [path.join(folder, "other")]), /only from/);
+  assert.throws(() => checkMapPath(path.join(folder, "missing.map"), [folder]), /not found/);
 });
