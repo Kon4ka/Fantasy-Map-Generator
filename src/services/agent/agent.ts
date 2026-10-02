@@ -71,7 +71,12 @@ function toRow(type: EntityType, ref: EntityRef, entity: object, noteLimit = 0):
       continue;
     }
     const target = refs[key];
-    row[key] = target && typeof value === "number" ? [value, MapEntities.getName({ type: target, id: value })] : value;
+    if (!target || typeof value !== "number") {
+      row[key] = value;
+      continue;
+    }
+    const name = MapEntities.getName({ type: target, id: value });
+    row[key] = name ? [value, name] : null; // 0 or a removed entity means none
   }
   return row;
 }
