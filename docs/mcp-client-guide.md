@@ -34,7 +34,7 @@ without a window. Call `world_close` when you are done with a background session
 | `world_status` | see what is open: name, file, seed, counts, `revision` | — |
 | `world_schema` | learn types, fields and defaults | `type?` |
 | `world_query` | list entities as a table | `type`, `where`, `fields`, `sort`, `limit`, `cursor` |
-| `world_get` | full entities by id; `type:"lore"` for the world description | `type`, `ids`, `include` |
+| `world_get` | full entities by id; `type:"lore"` for the world description; `type:"style"` + `path` for styles | `type`, `ids`, `include`, `path` |
 | `world_apply` | change things (batch of ops) | `ops`, `dryRun`, `expectRevision` |
 | `world_generate` | regenerate a part, or a whole new map | `scope`, `seed`, `dryRun`, `expectRevision` |
 | `world_undo` | revert the last changes (up to 5) | `steps`, `force` |
@@ -67,8 +67,10 @@ Ops for `world_apply`:
 | `set` | `{op:"set", type, id, <field>: value…}` | fields per type: see `world_schema`; `note` (HTML) on any entity; renaming updates a full name that contains the old name |
 | `assign` | `{op:"assign", type: state\|province\|culture\|religion, id, cells: {…}}` | selectors intersect: `feature`, `of: {type, id}`, `circle: [x, y, r]`, `polygon: [[x, y]…]`, `cells: [ids]`; land only; a province stays inside its state |
 | `merge` | `{op:"merge", type:"state", id: keep, ids: [absorbed…]}` | absorbed states are removed |
-| `create` | `{op:"create", type:"marker", x, y, name, markerType?, icon?, note?}` or `{…type:"addedLabel", x, y, text, featureId?}` | coordinates are map units (`world_status.size`) |
-| `remove` | `{op:"remove", type: marker\|addedLabel, id}` | |
+| `split` | `{op:"split", type:"state", id, x, y, cells: {…}, name?, color?}` | a new state with its capital at x,y takes the selected cells of state `id` |
+| `create` | `marker {x, y, name, markerType?, icon?, note?}`, `addedLabel {x, y, text, featureId?}`, `burg {x, y, name?, note?}`, `state {x, y, name?, color?, cells?}` | coordinates are map units (`world_status.size`); a state gets a capital burg at x,y |
+| `remove` | `{op:"remove", type: marker\|addedLabel\|burg, id}` | removing a capital leaves its state without one |
+| `style` | `{op:"style", path:"states.statesBody.attrs.opacity", value}` | existing `attrs`/`options` values only, same type; read paths with `world_get type:"style"` |
 | `layer` | `{op:"layer", id, on}` | layer ids: `world_query {type:"layer"}` |
 | `lore` | `{op:"lore", name?, description?, year?, era?, eraShort?}` | |
 
@@ -113,6 +115,7 @@ world_apply  {ops:[…same…], dryRun:false, expectRevision:"1b187e2"}
 Every error is one line in `{error}` with the reason and usually the fix (allowed fields, valid scopes,
 the current revision). "No map is open" means no editor is connected — see section 1.
 
-Not available yet: splitting states, creating states and burgs, style changes. Do not promise them.
+Not editable through this server: heights and cell geometry, provinces' and cultures' creation, routes and
+rivers' shapes. Do not promise them.
 
 Implementation details and the design: [ai-mcp-guide.md](ai-mcp-guide.md).

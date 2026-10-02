@@ -306,7 +306,10 @@ function schema(args: { type?: string } = {}) {
   if (!args.type) {
     return {
       types: [...ENTITY_TYPES, "layer"],
-      pseudo: { lore: "world_get type=lore: name, description, calendar" },
+      pseudo: {
+        lore: "world_get type=lore: name, description, calendar",
+        style: "world_get type=style path=states.statesBody: styles; change with op style"
+      },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
       methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save", "view"],
       ops: OPERATIONS
@@ -325,6 +328,19 @@ function schema(args: { type?: string } = {}) {
   };
 }
 
+/** A branch of the styles store; without a path, the layer names only */
+function styleNode(path = "") {
+  if (!path) return { layers: Object.keys(styles), hint: 'path like "states" or "states.statesBody.attrs"' };
+  let node: unknown = styles;
+  for (const key of path.split(".")) {
+    if (typeof node !== "object" || node === null || !(key in node)) throw new Error(`style path "${path}" not found`);
+    node = (node as Record<string, unknown>)[key];
+  }
+  const text = JSON.stringify(node);
+  if (text.length > 4000) return { keys: Object.keys(node as object), hint: "too big, ask for a deeper path" };
+  return compact(node);
+}
+
 function query(args: { type?: string } & TableQuery) {
   assertType(args.type);
   return toTable(rowsOf(args.type), args, DEFAULT_FIELDS[args.type]);
@@ -332,6 +348,7 @@ function query(args: { type?: string } & TableQuery) {
 
 function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]; include?: string[] }) {
   if (args.type === "lore") return compact(structuredClone(options.map.lore));
+  if (args.type === "style") return styleNode((args as { path?: string }).path);
   assertType(args.type);
   const type = args.type;
   if (type === "layer") return rowsOf(type).filter(row => args.ids?.includes(row.id as string));

@@ -51,12 +51,13 @@ const TOOLS = [
   {
     name: "world_get",
     method: "get",
-    description: "Full entities by id (max 50). type=lore gives world name, description, calendar.",
+    description: "Full entities by id (max 50). type=lore: world name, description, calendar; type=style with path: styles.",
     inputSchema: {
       type: "object",
       properties: {
         type: { type: "string" },
         ids: { type: "array", items: { type: ["number", "string"] } },
+        path: { type: "string", description: "type=style only" },
         fields,
         include: { ...fields, description: "position, context, cellCount, note (default: note)" }
       },
@@ -74,7 +75,7 @@ const TOOLS = [
         ops: {
           type: "array",
           description:
-            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | merge {type:state,id,ids} | create {type:marker|addedLabel,x,y,name|text,markerType?,icon?,note?} | remove {type:marker|addedLabel,id} | layer {id,on} | lore {name?,description?,year?,era?}. Fields per type: world_schema",
+            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | merge {type:state,id,ids} | split {type:state,id,x,y,cells,name?,color?} | create {type:marker|addedLabel|burg|state,x,y,name|text,…} | remove {type:marker|addedLabel|burg,id} | layer {id,on} | style {path,value} | lore {name?,description?,year?,era?}. Fields: world_schema",
           items: { type: "object" }
         },
         dryRun: { type: "boolean" },

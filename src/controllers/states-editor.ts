@@ -1549,18 +1549,25 @@ function enterAddStateMode(this: HTMLElement): void {
 }
 
 function addState(this: SVGElement, event: MouseEvent): void {
-  const { cells, states, burgs } = pack as any;
-  const point = getPointer(event, this);
-  const center = Pack.findCell(point[0], point[1])!;
-  if (cells.h[center] < 20) {
-    tip("You cannot place state into the water. Please click on a land cell", false, "error");
+  try {
+    createState(getPointer(event, this) as [number, number]);
+  } catch (error) {
+    tip((error as Error).message, false, "error");
     return;
   }
+  if (event.shiftKey === false) exitAddStateMode();
+  statesTable.refresh();
+}
+
+/** A new one-cell state with its capital at the point; grow it by painting. Returns its id */
+export function createState(point: [number, number], name?: string): number {
+  const { cells, states, burgs } = pack as any;
+  const center = Pack.findCell(point[0], point[1])!;
+  if (cells.h[center] < 20) throw new Error("You cannot place state into the water. Please click on a land cell");
 
   let burgId = cells.burg[center];
   if (burgId && burgs[burgId].capital) {
-    tip("Existing capital cannot be selected as a new state capital! Select other cell", false, "error");
-    return;
+    throw new Error("Existing capital cannot be selected as a new state capital! Select other cell");
   }
 
   if (!burgId) {
@@ -1577,11 +1584,9 @@ function addState(this: SVGElement, event: MouseEvent): void {
   Burgs.changeGroup(burgs[burgId], null);
   Layers.draw("burgIcons", "labels", "routes");
 
-  if (event.shiftKey === false) exitAddStateMode();
-
   const culture = cells.culture[center];
   const basename = center % 5 === 0 ? burgs[burgId].name : Names.getCulture(culture);
-  const name = Names.getState(basename, culture);
+  name ||= Names.getState(basename, culture);
   const color = getRandomColor();
 
   // generate emblem
@@ -1646,8 +1651,7 @@ function addState(this: SVGElement, event: MouseEvent): void {
 
   Layers.hide("provinces");
   Layers.draw("states", "borders");
-
-  statesTable.refresh();
+  return newState;
 }
 
 function exitAddStateMode(): void {

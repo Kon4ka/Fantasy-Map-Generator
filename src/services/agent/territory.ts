@@ -29,6 +29,7 @@ const COLLECTION: Record<TerritoryType, () => { removed?: boolean }[]> = {
 export const TERRITORY_TYPES = Object.keys(ASSIGNMENT) as TerritoryType[];
 
 let painters: Record<TerritoryType, Paint> | undefined;
+let stateFactory: ((point: [number, number], name?: string) => number) | undefined;
 
 /** The brushes live in lazily loaded editors; load them once before planning territory ops */
 export async function loadPainters(): Promise<void> {
@@ -39,6 +40,7 @@ export async function loadPainters(): Promise<void> {
     import("@/controllers/cultures-editor"),
     import("@/controllers/religions-editor")
   ]);
+  stateFactory = states.createState;
   painters = {
     state: changes => {
       states.applyStatesPaint(changes, true, false); // the agent reports removed states itself
@@ -48,6 +50,12 @@ export async function loadPainters(): Promise<void> {
     culture: cultures.applyCulturePaint,
     religion: religions.applyReligionPaint
   };
+}
+
+/** Found a state with its capital at the point; returns the new id */
+export function createState(point: [number, number], name?: string): number {
+  if (!stateFactory) throw new Error("territory painters are not loaded");
+  return stateFactory(point, name);
 }
 
 export function painter(type: TerritoryType): Paint {
