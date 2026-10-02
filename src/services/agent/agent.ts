@@ -1,6 +1,7 @@
-// Read API for the AI agent (MCP), reached by the launcher through page.evaluate. See docs/ai-mcp-guide.md
+// Agent API for AI tools (MCP), reached by the launcher through page.evaluate. See docs/ai-mcp-guide.md
 import { Layers } from "@/components/layers";
 import { ENTITY_TYPES, type EntityRef, type EntityType, MapEntities } from "@/components/map-entities";
+import { execute, OPERATIONS, plan } from "@/services/agent/apply";
 import { compact, type Row, type TableQuery, toTable } from "@/services/agent/table";
 import { MapFiles } from "@/services/io/map-file";
 
@@ -95,16 +96,72 @@ function status() {
     size: [options.map.graph.width, options.map.graph.height],
     cells: pack.cells?.i?.length ?? 0,
     counts,
-    revision: revision(counts)
+    revision: revision(),
+    undo: snapshots.length
   };
 }
 
-/** Changes whenever entities are added, removed or renamed. Cheap: names and counts only */
-function revision(counts: Record<string, number>): string {
+/** Fingerprint of what agent and editors change: entity names, colors, notes, positions; layers; lore */
+function revision(): string {
   let hash = 2166136261;
-  const text = JSON.stringify(counts) + pack.states.map(s => s.name).join() + pack.burgs.length;
-  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  const add = (text: string) => {
+    for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  };
+  for (const type of ENTITY_TYPES) {
+    for (const { ref, entity } of MapEntities.collect(type)) {
+      const { name, color, note, x, y, label } = entity as unknown as Record<string, unknown>;
+      add(
+        `${type}${MapEntities.key(ref)}${name}${color}${(note as string)?.length}${x},${y}${(label as { text?: string })?.text}`
+      );
+    }
+  }
+  add(Layers.all.map(layer => +Layers.isOn(layer.id)).join("") + JSON.stringify(options.map.lore));
   return (hash >>> 0).toString(36);
+}
+
+// map serializations taken before each applied batch, newest last; with the revision the batch produced
+const snapshots: { data: string; after: string }[] = [];
+const MAX_SNAPSHOTS = 5;
+
+async function apply(args: { ops?: unknown; dryRun?: boolean; expectRevision?: string }) {
+  const planned = plan(args.ops);
+  const current = revision();
+  const changes = planned.map(step => step.summary);
+  if (args.dryRun !== false) return { dryRun: true, changes, revision: current };
+  if (args.expectRevision !== current) {
+    return { error: `revision is ${current}, expected ${args.expectRevision}: the map changed; re-read, then retry` };
+  }
+
+  const { Save } = await import("@/services/io/save");
+  const data = Save.prepareMapData();
+  try {
+    execute(planned);
+  } catch (error) {
+    await restore(data);
+    return { error: `edit failed and was rolled back: ${(error as Error).message}` };
+  }
+  const after = revision();
+  snapshots.push({ data, after });
+  if (snapshots.length > MAX_SNAPSHOTS) snapshots.shift();
+  return { applied: changes.length, changes, revision: after };
+}
+
+async function undo(args: { steps?: number; force?: boolean }) {
+  const steps = Math.min(Math.max(1, args.steps ?? 1), snapshots.length);
+  if (!snapshots.length) return { error: "nothing to undo" };
+  if (!args.force && snapshots.at(-1)!.after !== revision()) {
+    return {
+      error: "the map changed after the last agent edit; undo would drop those changes. Pass force: true to undo anyway"
+    };
+  }
+  const target = snapshots.splice(snapshots.length - steps, steps)[0];
+  await restore(target.data);
+  return { undone: steps, revision: revision(), undo: snapshots.length };
+}
+
+async function restore(data: string): Promise<void> {
+  const { Load } = await import("@/services/io/load");
+  await Load.restoreSnapshot(data);
 }
 
 function schema(args: { type?: string } = {}) {
@@ -113,7 +170,8 @@ function schema(args: { type?: string } = {}) {
       types: [...ENTITY_TYPES, "layer"],
       pseudo: { lore: "world_get type=lore: name, description, calendar" },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
-      methods: ["status", "schema", "query", "get"]
+      methods: ["status", "schema", "query", "get", "apply", "undo"],
+      ops: OPERATIONS
     };
   }
   assertType(args.type);
@@ -156,15 +214,15 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get };
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo };
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
-function call(method: string, args: Record<string, unknown> = {}): unknown {
+async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {
   try {
     if (!pack?.cells?.i) return { error: "no map is loaded yet" };
     const handler = METHODS[method];
     if (!handler) return { error: `unknown method "${method}"; methods: ${Object.keys(METHODS).join(", ")}` };
-    return handler(args as never);
+    return await handler(args as never);
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }

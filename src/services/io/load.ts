@@ -715,8 +715,19 @@ async function parseLoadedData(data: string[], mapVersion: string | null, file?:
   }
 }
 
+/** Reload a map serialized in this session (agent undo), keeping the link to its file */
+async function restoreSnapshot(data: string): Promise<void> {
+  const { mapData, mapVersion } = await parseLoadedResult(new TextEncoder().encode(data));
+  if (!mapData || !mapVersion) throw new Error("snapshot cannot be parsed");
+  const restoreFile = MapFiles.preserve();
+  await parseLoadedData(mapData, mapVersion);
+  restoreFile();
+  window.dispatchEvent(new Event("map:file-saved")); // the caption shows the file again
+}
+
 export const Load = {
   quickLoad,
+  restoreSnapshot,
   loadFromDropbox,
   createSharableDropboxLink,
   loadMapFromURL,

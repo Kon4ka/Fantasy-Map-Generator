@@ -59,6 +59,32 @@ const TOOLS = [
       },
       required: ["type"]
     }
+  },
+  {
+    name: "world_apply",
+    method: "apply",
+    description:
+      "Edit the map with a batch of ops. dryRun (default) previews; then repeat with dryRun:false and the revision it returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ops: {
+          type: "array",
+          description:
+            "set {type,id,field:value…} | create {type:marker|addedLabel,x,y,name|text,markerType?,icon?,note?} | remove {type:marker|addedLabel,id} | layer {id,on} | lore {name?,description?,year?,era?}. Fields per type: world_schema",
+          items: { type: "object" }
+        },
+        dryRun: { type: "boolean" },
+        expectRevision: { type: "string" }
+      },
+      required: ["ops"]
+    }
+  },
+  {
+    name: "world_undo",
+    method: "undo",
+    description: "Revert the last applied batches (up to 5). Refuses if the map changed since, unless force.",
+    inputSchema: { type: "object", properties: { steps: { type: "number" }, force: { type: "boolean" } } }
   }
 ];
 
@@ -97,7 +123,8 @@ export async function handle(message: Json, callAgent: CallAgent = callBridge): 
         protocolVersion: (params.protocolVersion as string) ?? "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: "fantasy-map", version: "0.1.0" },
-        instructions: "Read-only access to the open map. Start with world_status; answers are compact tables."
+        instructions:
+          "Read and edit the open map. Start with world_status; answers are compact tables. Edits: preview with world_apply, then apply with the returned revision; world_undo reverts."
       });
     case "ping":
       return reply({});

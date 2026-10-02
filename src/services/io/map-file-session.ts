@@ -40,6 +40,15 @@ export class MapFileSession {
     this.association = Promise.resolve();
   }
 
+  /** Keep the file link across an in-place reload of the same map (agent undo); call the result after loading */
+  preserve(): () => void {
+    const { target, handle, name, association } = this;
+    return () => {
+      this.revision++;
+      Object.assign(this, { target, handle, name, association });
+    };
+  }
+
   associate(file: File, handle?: WritableMapFile): Promise<void> {
     this.clear();
     const revision = this.revision;
