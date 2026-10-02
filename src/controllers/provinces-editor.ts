@@ -249,7 +249,7 @@ function refreshProvincesEditor(): void {
   provincesTable.reset();
 }
 
-function collectStatistics(): void {
+export function collectStatistics(): void {
   const { cells, provinces, burgs } = pack;
 
   provinces.forEach(p => {
@@ -1140,33 +1140,41 @@ function enterAddProvinceMode(this: HTMLElement): void {
 }
 
 function addProvince(this: SVGElement, event: any): void {
-  const { cells, provinces } = pack;
-  const point = getPointer(event, this);
-  const center = Pack.findCell(point[0], point[1])!;
-  if (cells.h[center] < 20) {
-    tip("You cannot place province into the water. Please click on a land cell", false, "error");
+  let province: number;
+  try {
+    province = createProvince(getPointer(event, this) as [number, number]);
+  } catch (error) {
+    tip((error as Error).message, false, "error");
     return;
   }
+  if (event.shiftKey === false) exitAddProvinceMode();
+  filterState.stateId = pack.provinces[province].state;
+  dialogState.set(dialogId, "filters", filterState);
+  ensureEl<HTMLSelectElement>("provincesFilterState").value = String(filterState.stateId);
+  provincesTable.reset();
+}
+
+/** A new province centred at the point, with the neighbouring cells of its state. Returns its id */
+export function createProvince(point: [number, number], name?: string): number {
+  const { cells, provinces } = pack;
+  const center = Pack.findCell(point[0], point[1])!;
+  if (cells.h[center] < 20) throw new Error("You cannot place province into the water. Please click on a land cell");
 
   const oldProvince = cells.province[center];
   if (oldProvince && provinces[oldProvince].center === center) {
-    tip("The cell is already a center of a different province. Select other cell", false, "error");
-    return;
+    throw new Error("The cell is already a center of a different province. Select other cell");
   }
 
   const state = cells.state[center];
   if (!state) {
-    tip("You cannot create a province in neutral lands. Please assign this land to a state first", false, "error");
-    return;
+    throw new Error("You cannot create a province in neutral lands. Please assign this land to a state first");
   }
-
-  if (event.shiftKey === false) exitAddProvinceMode();
 
   const province = provinces.length;
   pack.states[state].provinces!.push(province);
   const burg = cells.burg[center];
   const c = cells.culture[center];
-  const name = burg ? pack.burgs[burg].name : Names.getState(Names.getCultureShort(c), c);
+  name ||= burg ? pack.burgs[burg].name : Names.getState(Names.getCultureShort(c), c);
   const formName = oldProvince ? provinces[oldProvince].formName : "Province";
   const fullName = `${name} ${formName}`;
   const stateColor = pack.states[state].color!;
@@ -1194,10 +1202,7 @@ function addProvince(this: SVGElement, event: any): void {
   Layers.draw("labels");
 
   collectStatistics();
-  filterState.stateId = state;
-  dialogState.set(dialogId, "filters", filterState);
-  ensureEl<HTMLSelectElement>("provincesFilterState").value = String(filterState.stateId);
-  provincesTable.reset();
+  return province;
 }
 
 function exitAddProvinceMode(): void {

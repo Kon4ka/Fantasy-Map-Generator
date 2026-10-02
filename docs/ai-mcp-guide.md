@@ -243,6 +243,10 @@ Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
 `create` также создаёт `burg` и `state` (столица в x,y, необязательные `cells`), `remove` — `burg`;
 `style {path, value}` меняет существующее значение `attrs`/`options` в `styles` того же типа
 (`world_get type=style path=…` читает). Новое государство создаётся функцией `createState` редактора.
+`create` строит и `province` (функция `createProvince` редактора провинций), `culture` (`Cultures.add`) и `route`
+(`Routes.findCells` + `Routes.build`: самый дешёвый путь генератора по суше или морю). `set state capital` и
+`set burg x/y/state` повторяют логику редактора поселения. `world_measure` считает расстояние между центрами,
+ближайшими краями (граничные клетки территорий) и по суше, в единицах карты; `draw` добавляет линейку.
 Правки исходников при открытой фоновой копии тоже перезагружают её страницу (свой сервер Vite).
 
 `world_view {type, id} | {rect: [x, y, w, h]} | {}` возвращает PNG (по умолчанию 512 px по длинной стороне,

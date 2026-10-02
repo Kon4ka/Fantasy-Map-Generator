@@ -75,7 +75,7 @@ const TOOLS = [
         ops: {
           type: "array",
           description:
-            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | merge {type:state,id,ids} | split {type:state,id,x,y,cells,name?,color?} | create {type:marker|addedLabel|burg|state,x,y,name|text,…} | remove {type:marker|addedLabel|burg,id} | layer {id,on} | style {path,value} | lore {name?,description?,year?,era?}. Fields: world_schema",
+            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | set state capital:burgId; set burg x,y|state | merge {type:state,id,ids} | split {type:state,id,x,y,cells,name?,color?} | create {type:marker|addedLabel|burg|state|province|culture,x,y,name|text,cells?…} or {type:route,from,to,group?,name?} (points [x,y] or {burg}) | remove {type:marker|addedLabel|burg,id} | layer {id,on} | style {path,value} | lore {name?,description?,year?,era?}. Fields: world_schema",
           items: { type: "object" }
         },
         dryRun: { type: "boolean" },
@@ -140,6 +140,16 @@ const TOOLS = [
         rect: { type: "array", items: { type: "number" } },
         size: { type: "number", description: "longest side in px, default 512, max 1024" }
       }
+    }
+  },
+  {
+    name: "world_measure",
+    method: "measure",
+    description: "Distance between two places ([x,y] or {type,id}): centers, nearest edges, over land; draw:true adds a ruler.",
+    inputSchema: {
+      type: "object",
+      properties: { from: {}, to: {}, draw: { type: "boolean" } },
+      required: ["from", "to"]
     }
   },
   {

@@ -8,6 +8,8 @@ import {
   assertTerritory,
   type CellSelector,
   changesFor,
+  createCulture,
+  createProvince,
   createState,
   painter,
   selectCells
@@ -23,9 +25,9 @@ interface Planned {
 
 // fields `set` may change, per type; `note` is allowed on every entity
 const SETTABLE: Partial<Record<EntityType, string[]>> = {
-  state: ["name", "fullName", "formName", "form", "color"],
+  state: ["name", "fullName", "formName", "form", "color", "capital"],
   province: ["name", "fullName", "formName", "color"],
-  burg: ["name", "population", "group"],
+  burg: ["name", "population", "group", "x", "y", "state"],
   culture: ["name", "color"],
   religion: ["name", "fullName", "form", "deity", "color"],
   marker: ["name", "icon", "size"],
@@ -81,8 +83,71 @@ const layersOf = (type: EntityType, ref: EntityRef, field?: string): LayerId[] =
   ...(field === "name" || field === "fullName" ? (NAME_LAYERS[type] ?? []) : [])
 ];
 
+/** Make a burg of the state its capital, as the burg editor's capital toggle does */
+function planCapital(stateId: number, burgId: unknown): Planned {
+  const burg = pack.burgs[Number(burgId)];
+  if (!burgId || !burg || burg.removed) fail(`burg ${burgId} not found`);
+  if (burg.state !== stateId) fail(`burg ${burgId} ${burg.name} is in state ${burg.state}, not ${stateId}`);
+  const state = pack.states[stateId];
+  return {
+    summary: `state ${stateId} capital: ${pack.burgs[state.capital]?.name ?? "none"} → ${burg.name}`,
+    layers: ["burgIcons", "labels"],
+    run: () => {
+      const old = pack.burgs[state.capital];
+      state.capital = burg.i;
+      state.center = burg.cell;
+      burg.capital = 1;
+      Burgs.changeGroup(burg);
+      if (old?.i && old.i !== burg.i) {
+        old.capital = 0;
+        Burgs.changeGroup(old);
+      }
+    }
+  };
+}
+
+/** Move a burg to x,y (a free land cell); a capital stays inside its state */
+function planRelocate(burgId: number, x: unknown, y: unknown): Planned {
+  checkValue("x", x);
+  checkValue("y", y);
+  const burg = pack.burgs[burgId];
+  const cell = Pack.findCell(x as number, y as number, Infinity, pack) as number;
+  if (pack.cells.h[cell] < 20) fail(`${x},${y} is water`);
+  if (pack.cells.burg[cell] && pack.cells.burg[cell] !== burgId) fail(`cell ${cell} already has burg ${pack.cells.burg[cell]}`);
+  const state = pack.cells.state[cell];
+  if (burg.capital && state !== burg.state) fail("a capital cannot move into another state");
+  const moved = state !== burg.state ? ` (state ${burg.state} → ${state})` : "";
+  return {
+    summary: `burg ${burgId} ${burg.name} moves to ${x},${y}${moved}`,
+    layers: ["burgIcons", "labels"],
+    run: () => {
+      pack.cells.burg[burg.cell] = 0;
+      pack.cells.burg[cell] = burgId;
+      Object.assign(burg, { cell, state, x, y });
+      if (burg.capital) pack.states[state].center = cell;
+      if (burg.label) Object.assign(burg.label, { dx: 0, dy: 0, pathPoints: undefined });
+    }
+  };
+}
+
+const hasMore = (op: Op) => Object.keys(op).some(key => !["op", "type", "id"].includes(key));
+
 function planSet(op: Op): Planned[] {
   const { type, ref, entity } = resolve(op);
+  if (type === "state" && "capital" in op) {
+    const { capital, ...rest } = op;
+    return [planCapital(ref.id, capital), ...(hasMore(rest) ? planSet(rest) : [])];
+  }
+  if (type === "burg" && ("x" in op || "y" in op || "state" in op)) {
+    const { x, y, state, ...rest } = op;
+    const steps: Planned[] = [];
+    if (x !== undefined || y !== undefined) steps.push(planRelocate(ref.id, x ?? entity.x, y ?? entity.y));
+    if (state !== undefined) {
+      if (entity.capital) fail("a capital cannot change state; make another burg the capital first");
+      steps.push(...planAssign({ op: "assign", type: "state", id: state as number, cells: { cells: [entity.cell as number] } }));
+    }
+    return [...steps, ...(hasMore(rest) ? planSet(rest) : [])];
+  }
   const allowed = SETTABLE[type] ?? [];
   const changes = Object.entries(op).filter(([key]) => !["op", "type", "id"].includes(key));
   if (!changes.length) fail(`set ${type} ${op.id}: no fields given`);
@@ -123,7 +188,76 @@ function planSet(op: Op): Planned[] {
   });
 }
 
+/** A province (inside the state at x,y) or a culture centred at x,y, optionally taking the selected cells */
+function planNewTerritory(op: Op, x: number, y: number): Planned[] {
+  const type = op.type as "province" | "culture";
+  if (op.name !== undefined) checkValue("name", op.name);
+  if (op.color !== undefined) checkValue("color", op.color);
+  const center = Pack.findCell(x, y, Infinity, pack) as number;
+  if (pack.cells.h[center] < 20) fail(`${x},${y} is water`);
+  if (type === "province") {
+    if (!pack.cells.state[center]) fail(`${x},${y} is neutral land; a province needs a state`);
+    if (pack.provinces.some(p => p && !p.removed && p.center === center)) fail(`${x},${y} is already a province center`);
+  } else if (pack.cultures.some(c => c && !c.removed && c.center === center)) {
+    fail(`${x},${y} is already a culture center`);
+  }
+  const selected = op.cells ? selectCells(op.cells as CellSelector) : [];
+  const id = type === "province" ? pack.provinces.length : pack.cultures.length;
+  const extent = selected.length ? ` with up to ${selected.length} cells` : "";
+  return [
+    {
+      summary: `create ${type} ${id} "${op.name ?? "auto-named"}" at ${x},${y}${extent}`,
+      layers: type === "province" ? ["provinces", "labels"] : ["cultures"],
+      run: () => {
+        const name = op.name as string | undefined;
+        const created = type === "province" ? createProvince([x, y], name) : createCulture(center);
+        const entity = (type === "province" ? pack.provinces : pack.cultures)[created] as {
+          name: string;
+          fullName?: string;
+          color?: string;
+        };
+        if (name) {
+          entity.name = name;
+          if (type === "province") entity.fullName = name;
+        }
+        if (op.color) entity.color = op.color as string;
+        const changes = changesFor(type, created, type === "culture" ? [center, ...selected] : selected);
+        if (changes.size) painter(type)(changes);
+      }
+    }
+  ];
+}
+
+/** A route endpoint: {burg: id} or [x, y] */
+function endpointCell(point: unknown): number {
+  if (Array.isArray(point)) {
+    const [x, y] = point as number[];
+    if (![x, y].every(Number.isFinite)) fail("a route point is [x, y] or {burg: id}");
+    return Pack.findCell(x, y, Infinity, pack) as number;
+  }
+  const burg = pack.burgs[Number((point as { burg?: number })?.burg)];
+  if (!burg || burg.removed) fail("a route point is [x, y] or {burg: id}");
+  return burg.cell;
+}
+
+/** A route along the cheapest path: {from, to, group: roads|trails|searoutes, name?} */
+function planRoute(op: Op): Planned[] {
+  const group = (op.group as string) ?? "roads";
+  if (!["roads", "trails", "searoutes"].includes(group)) fail("group must be roads, trails or searoutes");
+  if (op.name !== undefined) checkValue("name", op.name);
+  const cells = Routes.findCells(endpointCell(op.from), endpointCell(op.to), group);
+  if (!cells) return fail(`no ${group === "searoutes" ? "sea" : "land"} path between the points`);
+  return [
+    {
+      summary: `create ${group} route "${op.name ?? "unnamed"}" through ${cells.length} cells`,
+      layers: ["routes"],
+      run: () => Routes.build(cells, group, op.name as string | undefined)
+    }
+  ];
+}
+
 function planCreate(op: Op): Planned[] {
+  if (op.type === "route") return planRoute(op);
   const { x, y } = op;
   checkValue("x", x);
   checkValue("y", y);
@@ -186,7 +320,8 @@ function planCreate(op: Op): Planned[] {
     ];
   }
   if (op.type === "state") return planNewState(op, x as number, y as number);
-  return fail(`create supports marker, addedLabel, burg and state, not "${op.type}"`);
+  if (op.type === "province" || op.type === "culture") return planNewTerritory(op, x as number, y as number);
+  return fail(`create supports marker, addedLabel, burg, state, province, culture and route, not "${op.type}"`);
 }
 
 /** A state founded at x,y (its capital), optionally taking the selected cells at once */

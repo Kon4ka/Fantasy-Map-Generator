@@ -30,6 +30,20 @@ export const TERRITORY_TYPES = Object.keys(ASSIGNMENT) as TerritoryType[];
 
 let painters: Record<TerritoryType, Paint> | undefined;
 let stateFactory: ((point: [number, number], name?: string) => number) | undefined;
+let provinceFactory: ((point: [number, number], name?: string) => number) | undefined;
+
+/** cells and area of every culture or religion, as their editors show them */
+function recount(type: "culture" | "religion"): void {
+  const collection = COLLECTION[type]() as { cells?: number; area?: number }[];
+  for (const entity of collection) if (entity) Object.assign(entity, { cells: 0, area: 0 });
+  const assigned = ASSIGNMENT[type]();
+  for (const cell of pack.cells.i) {
+    const entity = collection[assigned[cell]];
+    if (!entity) continue;
+    entity.cells! += 1;
+    entity.area! += pack.cells.area[cell];
+  }
+}
 
 /** The brushes live in lazily loaded editors; load them once before planning territory ops */
 export async function loadPainters(): Promise<void> {
@@ -41,14 +55,24 @@ export async function loadPainters(): Promise<void> {
     import("@/controllers/religions-editor")
   ]);
   stateFactory = states.createState;
+  provinceFactory = provinces.createProvince;
   painters = {
     state: changes => {
       states.applyStatesPaint(changes, true, false); // the agent reports removed states itself
       States.collectStatistics();
     },
-    province: provinces.applyProvincePaint,
-    culture: cultures.applyCulturePaint,
-    religion: religions.applyReligionPaint
+    province: changes => {
+      provinces.applyProvincePaint(changes);
+      provinces.collectStatistics();
+    },
+    culture: changes => {
+      cultures.applyCulturePaint(changes);
+      recount("culture");
+    },
+    religion: changes => {
+      religions.applyReligionPaint(changes);
+      recount("religion");
+    }
   };
 }
 
@@ -56,6 +80,19 @@ export async function loadPainters(): Promise<void> {
 export function createState(point: [number, number], name?: string): number {
   if (!stateFactory) throw new Error("territory painters are not loaded");
   return stateFactory(point, name);
+}
+
+/** Found a province at the point inside its state; returns the new id */
+export function createProvince(point: [number, number], name?: string): number {
+  if (!provinceFactory) throw new Error("territory painters are not loaded");
+  return provinceFactory(point, name);
+}
+
+/** Found a culture centred at the cell; returns the new id */
+export function createCulture(center: number): number {
+  const id = pack.cultures.length;
+  Cultures.add(center);
+  return id;
 }
 
 export function painter(type: TerritoryType): Paint {

@@ -223,6 +223,79 @@ async function view(args: { type?: string; id?: number | string; rect?: number[]
   }
 }
 
+type Place = { label: string; center: [number, number]; edge: [number, number][]; cell: number };
+
+/** A measured place: [x, y] or {type, id}; territories are measured from their border cells */
+function place(spec: unknown): Place {
+  const { cells } = pack;
+  if (Array.isArray(spec)) {
+    const [x, y] = spec as number[];
+    if (![x, y].every(Number.isFinite)) throw new Error("a place is [x, y] or {type, id}");
+    return { label: `${x},${y}`, center: [x, y], edge: [[x, y]], cell: Pack.findCell(x, y, Infinity, pack) as number };
+  }
+  const { type, id } = (spec ?? {}) as { type?: string; id?: number | string };
+  assertType(type);
+  if (type === "layer") throw new Error("a place is [x, y] or {type, id}");
+  const ref = typeof id === "string" ? MapEntities.parseKey(id) : { type, id: Number(id) };
+  if (!ref || !MapEntities.get(ref)) throw new Error(`${type} ${id} not found`);
+  const label = `${type} ${id} ${MapEntities.getName(ref)}`;
+
+  const assigned = TERRITORY_CELLS[type]?.();
+  const own = assigned ? Array.from(cells.i).filter(cell => assigned[cell] === ref.id) : [];
+  const points = own.length
+    ? own.filter(cell => cells.c[cell].some(next => assigned![next] !== ref.id)).map(cell => cells.p[cell])
+    : MapEntities.getPoints(ref);
+  const position = MapEntities.getPosition(ref) ?? points[0];
+  if (!position) throw new Error(`${label} has no place on the map`);
+  const center: [number, number] = [position[0], position[1]];
+  return {
+    label,
+    center,
+    edge: points.length ? points.map(([x, y]) => [x, y] as [number, number]) : [center],
+    cell: Pack.findCell(center[0], center[1], Infinity, pack) as number
+  };
+}
+
+/** Distances between two places in map units: center to center, nearest edges, and the cheapest way over land */
+function measure(args: { from?: unknown; to?: unknown; draw?: boolean }) {
+  const a = place(args.from);
+  const b = place(args.to);
+  const { scale, unit } = options.map.units.distance;
+  const length = (p: [number, number], q: [number, number]) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+
+  let nearest: [[number, number], [number, number]] = [a.edge[0], b.edge[0]];
+  let best = Infinity;
+  for (const p of a.edge) {
+    for (const q of b.edge) {
+      const d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+      if (d < best) [best, nearest] = [d, [p, q]];
+    }
+  }
+
+  const path = a.cell === b.cell ? [a.cell] : Routes.findCells(a.cell, b.cell, "roads");
+  const overLand = path
+    ? path.slice(1).reduce((sum, cell, i) => sum + length(pack.cells.p[path[i]], pack.cells.p[cell]), 0)
+    : null;
+  const spacing = Math.sqrt((options.map.graph.width * options.map.graph.height) / pack.cells.i.length);
+
+  if (args.draw) {
+    Measurers.create("Ruler", best > 0 ? nearest : [a.center, b.center]);
+    if (Layers.isOn("rulers")) Layers.draw("rulers");
+    else Layers.show("rulers");
+  }
+  const toUnits = (value: number) => Math.round(value * scale * 10) / 10;
+  return {
+    from: a.label,
+    to: b.label,
+    unit,
+    centers: toUnits(length(a.center, b.center)),
+    edges: toUnits(Math.sqrt(best)),
+    touching: Math.sqrt(best) <= spacing * 1.5,
+    overLand: overLand === null ? null : toUnits(overLand),
+    ...(args.draw ? { ruler: "drawn" } : {})
+  };
+}
+
 /** Write the map to its file, or to a new file named by the agent (saveAs) */
 async function save(args: { mode?: string; name?: string }) {
   if (customization) return { error: "the map is in an edit mode; finish it in the editor first" };
@@ -311,7 +384,7 @@ function schema(args: { type?: string } = {}) {
         style: "world_get type=style path=states.statesBody: styles; change with op style"
       },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
-      methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save", "view"],
+      methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save", "view", "measure"],
       ops: OPERATIONS
     };
   }
@@ -369,7 +442,7 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save, view };
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save, view, measure };
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
 async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {

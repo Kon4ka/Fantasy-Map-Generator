@@ -41,6 +41,7 @@ without a window. Call `world_close` when you are done with a background session
 | `world_save` | write the file | `mode: save \| saveAs`, `name` |
 | `world_open` / `world_close` | open a `.map` (from `worlds/` or Downloads) / end a background session | `path`, `confirm` |
 | `world_view` | get a PNG of an entity, a rectangle or the map | `type`+`id` \| `rect`, `size` |
+| `world_measure` | distance between two places: centers, nearest edges, over land; optionally draw a ruler | `from`, `to` (`[x, y]` or `{type, id}`), `draw` |
 
 Entity types: `state`, `province`, `burg`, `culture`, `religion`, `feature` (islands, lakes), `river`,
 `route`, `marker`, `zone`, `addedLabel`, `regiment`, `journey`, `market`, `biome`, `good`, and `layer`.
@@ -64,11 +65,11 @@ Ops for `world_apply`:
 
 | Op | Shape | Notes |
 | --- | --- | --- |
-| `set` | `{op:"set", type, id, <field>: value…}` | fields per type: see `world_schema`; `note` (HTML) on any entity; renaming updates a full name that contains the old name |
+| `set` | `{op:"set", type, id, <field>: value…}` | fields per type: see `world_schema`; `note` (HTML) on any entity; renaming updates a full name that contains the old name; `state {capital: burgId}` moves the capital to a burg of that state; `burg {x, y}` relocates a burg, `burg {state}` hands its cell to another state (not for capitals) |
 | `assign` | `{op:"assign", type: state\|province\|culture\|religion, id, cells: {…}}` | selectors intersect: `feature`, `of: {type, id}`, `circle: [x, y, r]`, `polygon: [[x, y]…]`, `cells: [ids]`; land only; a province stays inside its state |
 | `merge` | `{op:"merge", type:"state", id: keep, ids: [absorbed…]}` | absorbed states are removed |
 | `split` | `{op:"split", type:"state", id, x, y, cells: {…}, name?, color?}` | a new state with its capital at x,y takes the selected cells of state `id` |
-| `create` | `marker {x, y, name, markerType?, icon?, note?}`, `addedLabel {x, y, text, featureId?}`, `burg {x, y, name?, note?}`, `state {x, y, name?, color?, cells?}` | coordinates are map units (`world_status.size`); a state gets a capital burg at x,y |
+| `create` | `marker {x, y, name, markerType?, icon?, note?}`, `addedLabel {x, y, text, featureId?}`, `burg {x, y, name?, note?}`, `state {x, y, name?, color?, cells?}`, `province {x, y, name?, color?, cells?}`, `culture {x, y, name?, color?, cells?}`, `route {from, to, group?, name?}` | coordinates are map units (`world_status.size`); a state gets a capital burg at x,y; a province stays inside the state at x,y; a route follows the cheapest land path (`roads`, `trails`) or sea path (`searoutes`) between `[x, y]` or `{burg: id}` points |
 | `remove` | `{op:"remove", type: marker\|addedLabel\|burg, id}` | removing a capital leaves its state without one |
 | `style` | `{op:"style", path:"states.statesBody.attrs.opacity", value}` | existing `attrs`/`options` values only, same type; read paths with `world_get type:"style"` |
 | `layer` | `{op:"layer", id, on}` | layer ids: `world_query {type:"layer"}` |
@@ -115,7 +116,6 @@ world_apply  {ops:[…same…], dryRun:false, expectRevision:"1b187e2"}
 Every error is one line in `{error}` with the reason and usually the fix (allowed fields, valid scopes,
 the current revision). "No map is open" means no editor is connected — see section 1.
 
-Not editable through this server: heights and cell geometry, provinces' and cultures' creation, routes and
-rivers' shapes. Do not promise them.
+Not editable through this server: heights and cell geometry, river courses, and the shape of existing routes. Do not promise them.
 
 Implementation details and the design: [ai-mcp-guide.md](ai-mcp-guide.md).

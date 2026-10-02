@@ -809,6 +809,32 @@ class RoutesModule {
     return newRoute as Route;
   }
 
+  /** The cheapest path between two cells for the group (sea for searoutes), or null if there is none */
+  findCells(from: number, to: number, group: string): number[] | null {
+    const path =
+      group === "searoutes"
+        ? this.findWaterPath(from, to)
+        : findPath(from, cell => cell === to, this.createCostEvaluator({ isWater: false }), pack);
+    return path && path.length > 1 ? path : null;
+  }
+
+  /** A new route of the group along the given cells, linked into the routes graph */
+  build(cells: number[], group: string, name?: string): Route {
+    const points = this.getPoints(group, cells, this.preparePointsArray());
+    const route = { i: this.getNextId(), group, feature: pack.cells.f[cells[0]], points, name } as Route;
+    if (!name) delete route.name;
+    pack.routes.push(route);
+    const links = pack.cells.routes;
+    for (let i = 0; i < cells.length - 1; i++) {
+      const [a, b] = [cells[i], cells[i + 1]];
+      links[a] ??= {};
+      links[a][b] = route.i;
+      links[b] ??= {};
+      links[b][a] = route.i;
+    }
+    return route;
+  }
+
   areConnected(from: number, to: number): boolean {
     const routeId = pack.cells.routes[from]?.[to];
     return routeId !== undefined;
