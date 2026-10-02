@@ -117,7 +117,7 @@ export class MapFileSession {
 
 declare global {
   interface Window {
-    kontarFiles?: MapFileBridge;
+    mapFileBridge?: MapFileBridge;
     showSaveFilePicker?: (options: {
       suggestedName: string;
       types: { description: string; accept: Record<string, string[]> }[];

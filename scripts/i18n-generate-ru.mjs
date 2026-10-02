@@ -7,7 +7,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const LOCALE_PATH = path.join(ROOT, "src", "data", "locales", "ru.json");
 const EXTRACTOR_PATH = path.join(import.meta.dirname, "i18n-extract.mjs");
 const ENDPOINT = "https://translate.googleapis.com/translate_a/single";
-const SEPARATOR = "__KONTAR_I18N_SEPARATOR__";
+const SEPARATOR = "__MAP_I18N_SEPARATOR__";
 const MAX_BATCH_LENGTH = 2800;
 
 const manualTranslations = {

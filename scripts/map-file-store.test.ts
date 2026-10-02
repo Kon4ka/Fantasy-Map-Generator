@@ -4,14 +4,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { createMapFileStore } from "./kontar-file-store.ts";
+import { createMapFileStore } from "./map-file-store.ts";
 
 const original = "1.153.1|test\r\n<svg id=\"map\"></svg>\r\noriginal";
 const edited = original.replace("original", "edited");
 const digest = (data: string) => createHash("sha256").update(data).digest("hex");
 
 test("launcher saves overwrite only the verified file, and Save as changes the target", async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "kontar-file-test-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "map-file-test-"));
   assert.equal(path.dirname(directory), path.resolve(os.tmpdir()));
   try {
     const file = path.join(directory, "world.map");

@@ -4,13 +4,13 @@ import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
 
-const APP_URL = process.env.KONTAR_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
+const APP_URL = process.env.MAP_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
 const root = process.cwd();
 const worldDir = path.join(root, "worlds", "kontar");
 const referenceDir = path.join(worldDir, "reference");
 const previewDir =
-  process.env.KONTAR_PREVIEW_DIR ??
-  path.join(os.tmpdir(), "kontar-previews");
+  process.env.MAP_PREVIEW_DIR ??
+  path.join(os.tmpdir(), "map-previews");
 
 await fs.mkdir(referenceDir, { recursive: true });
 await fs.mkdir(previewDir, { recursive: true });

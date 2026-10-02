@@ -3,12 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
-import { createMapFileStore } from "./kontar-file-store.ts";
+import { createMapFileStore } from "./map-file-store.ts";
 import { startAgentBridge } from "./map-agent-bridge.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const appUrl = "http://127.0.0.1:5173/Fantasy-Map-Generator/";
-const logDir = path.join(process.env.LOCALAPPDATA ?? root, "Kontar");
+const logDir = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator");
+const legacyDir = path.join(process.env.LOCALAPPDATA ?? root, "Kontar"); // data folder of earlier versions
 const logPath = path.join(logDir, "launcher.log");
 const dryRun = process.argv.includes("--dry-run");
 const testRun = process.argv.includes("--test");
@@ -17,6 +18,14 @@ const mapArgument = process.argv[process.argv.indexOf("--map") + 1];
 const requestedMap = process.argv.includes("--map") && mapArgument ? path.resolve(mapArgument) : undefined;
 
 fs.mkdirSync(logDir, { recursive: true });
+// move the browser profiles and log of earlier versions over, once
+if (fs.existsSync(legacyDir)) {
+  for (const entry of fs.readdirSync(legacyDir)) {
+    const target = path.join(logDir, entry);
+    if (!fs.existsSync(target)) fs.renameSync(path.join(legacyDir, entry), target);
+  }
+  if (!fs.readdirSync(legacyDir).length) fs.rmdirSync(legacyDir);
+}
 const logStream = fs.createWriteStream(logPath, { flags: "a" });
 const log = message => {
   const line = `[${new Date().toISOString()}] ${message}`;
@@ -36,7 +45,7 @@ const fail = error => {
       "-WindowStyle",
       "Hidden",
       "-Command",
-      `Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('${escaped}', 'Контар — ошибка запуска')`
+      `Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('${escaped}', 'Генератор карт — ошибка запуска')`
     ],
     { windowsHide: true }
   );
@@ -103,7 +112,7 @@ const getLatestMapPath = () => {
 };
 
 const getAvailableDownloadPath = (downloadsDirectory, suggestedFilename) => {
-  const safeFilename = (suggestedFilename || "kontar-map.map")
+  const safeFilename = (suggestedFilename || "map.map")
     .replace(/[<>:"/\\|?*]/g, "_")
     .replace(/[. ]+$/g, "");
   const filename = path.extname(safeFilename) ? safeFilename : `${safeFilename}.map`;
@@ -198,7 +207,7 @@ try {
       const files = createMapFileStore(downloadsDirectory, [
         path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds", "kontar")
       ]);
-      await page.exposeBinding("kontarFileOperation", ({ frame }, action, ...args) => {
+      await page.exposeBinding("mapFileOperation", ({ frame }, action, ...args) => {
         if (frame !== page.mainFrame() || new URL(frame.url()).origin !== new URL(appUrl).origin) {
           throw new Error("File access is limited to the map editor");
         }
@@ -208,10 +217,10 @@ try {
         throw new Error("Unknown file operation");
       });
       await page.addInitScript(() => {
-        window.kontarFiles = {
-          associate: (name, digest) => window.kontarFileOperation("associate", name, digest),
-          save: (id, data) => window.kontarFileOperation("save", id, data),
-          saveAs: (name, data) => window.kontarFileOperation("saveAs", name, data)
+        window.mapFileBridge = {
+          associate: (name, digest) => window.mapFileOperation("associate", name, digest),
+          save: (id, data) => window.mapFileOperation("save", id, data),
+          saveAs: (name, data) => window.mapFileOperation("saveAs", name, data)
         };
       });
     }
@@ -237,13 +246,12 @@ try {
     const mapsBeforeLoad = await page.evaluate(() => mapHistory.length);
     await page.locator("#mapToLoad").setInputFiles(mapPath);
     await page.waitForFunction(
-      ([previousCount, anyMap]) =>
-        mapHistory.length > previousCount && (anyMap || options.map.lore.name === "Контар после Первого раскола"),
-      [mapsBeforeLoad, Boolean(requestedMap)],
+      previousCount => mapHistory.length > previousCount,
+      mapsBeforeLoad,
       { timeout: 120_000 }
     );
     await page.bringToFront();
-    log("Карта Контара открыта");
+    log("Карта открыта");
     if (!testRun) {
       const roots = [path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds")];
       const infoPath = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json");

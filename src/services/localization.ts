@@ -19,7 +19,8 @@ interface LocaleCatalog {
 
 const ruLocale = ruLocaleJson as LocaleCatalog;
 const ignored = new Set(ruLocale.ignored ?? []);
-const STORAGE_KEY = "kontar.interfaceLocale";
+const STORAGE_KEY = "fmg.interfaceLocale";
+const LEGACY_STORAGE_KEY = "kontar.interfaceLocale"; // read once from earlier versions
 const TRANSLATABLE_ATTRIBUTES = ["aria-label", "data-tip", "placeholder", "title"] as const;
 const EXCLUDED_SELECTOR = [
   "#map",
@@ -55,7 +56,10 @@ let observer: MutationObserver | undefined;
 
 function resolveInitialLocale(): InterfaceLocale {
   const search = typeof location === "undefined" ? "" : location.search;
-  const stored = typeof localStorage === "undefined" ? null : localStorage.getItem(STORAGE_KEY);
+  const stored =
+    typeof localStorage === "undefined"
+      ? null
+      : (localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY));
   const requested = new URLSearchParams(search).get("lang") || stored;
   return requested === "en" ? "en" : "ru";
 }
@@ -77,7 +81,7 @@ function recordMissing(value: string): void {
   missingTranslations.add(value);
   if (import.meta.env.DEV) {
     const serialized = JSON.stringify([...missingTranslations]);
-    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("kontar.i18nMissing", serialized);
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("fmg.i18nMissing", serialized);
     document.documentElement.dataset.i18nMissing = serialized;
   }
 }
@@ -218,7 +222,7 @@ export function getMissingTranslations(): string[] {
 export function initializeLocalization(): void {
   missingTranslations.clear();
   if (import.meta.env.DEV) {
-    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("kontar.i18nMissing", "[]");
+    if (typeof sessionStorage !== "undefined") sessionStorage.setItem("fmg.i18nMissing", "[]");
     document.documentElement.dataset.i18nMissing = "[]";
   }
   document.documentElement.lang = locale;
@@ -237,7 +241,7 @@ export function initializeLocalization(): void {
 
 declare global {
   interface Window {
-    KontarI18n: {
+    MapI18n: {
       getLocale: typeof getLocale;
       getMissingTranslations: typeof getMissingTranslations;
       setLocale: typeof setLocale;
@@ -247,5 +251,5 @@ declare global {
 }
 
 if (typeof window !== "undefined") {
-  window.KontarI18n = { getLocale, getMissingTranslations, setLocale, translate };
+  window.MapI18n = { getLocale, getMissingTranslations, setLocale, translate };
 }

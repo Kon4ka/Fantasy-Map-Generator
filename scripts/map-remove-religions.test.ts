@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { gunzipSync, gzipSync } from "node:zlib";
-import { removeReligions } from "./kontar-remove-religions.ts";
+import { removeReligions } from "./map-remove-religions.ts";
 
 function fixture(svg = '<svg xmlns="http://www.w3.org/2000/svg"><g id="relig"/></svg>'): Buffer {
   const sections = Array.from({ length: 53 }, (_, index) => `preserved-${index}`);

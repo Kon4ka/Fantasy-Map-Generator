@@ -1,6 +1,6 @@
 # Interface localization
 
-Kontar Edition keeps translations outside feature code so upstream changes remain easy to merge.
+This fork keeps translations outside feature code so upstream changes remain easy to merge.
 
 ## Runtime
 
@@ -9,7 +9,7 @@ Kontar Edition keeps translations outside feature code so upstream changes remai
 - User-authored labels, notes and free text are excluded from automatic translation.
 - Generated proper names, map object names and name-base source data are transliterated to Cyrillic by `src/services/russian-map-content.ts` when a map is generated or loaded in Russian mode.
 - Internal enum and group identifiers remain English for compatibility; editors render their Russian labels from the shared catalog.
-- The selected interface language is stored in the browser under `kontar.interfaceLocale`.
+- The selected interface language is stored in the browser under `fmg.interfaceLocale`.
 - Russian is the default; English can be selected in Options → Language.
 
 ## Russian catalog
@@ -32,7 +32,7 @@ Run the catalog check after each upstream merge:
 npm run i18n:check
 ```
 
-Run `node scripts/kontar-verify-russian-data.mjs` with the development server active to load the Kontar map and verify that the affected data editors contain no remaining Latin-script values.
+Run `node scripts/map-verify-russian-data.mjs` with the development server active to load the world draft and verify that the affected data editors contain no remaining Latin-script values.
 
 The command scans static HTML, TypeScript UI templates, dialogs, notifications and confirmations. It fails when newly introduced interface strings are missing from the Russian catalog.
 
@@ -40,7 +40,7 @@ The command scans static HTML, TypeScript UI templates, dialogs, notifications a
 
 ## Git update workflow
 
-The official Azgaar repository is configured as `upstream`. Keep `master` clean and merge it into the Kontar branch:
+The official Azgaar repository is configured as `upstream`. Keep `master` clean and merge it into the fork branch:
 
 ```sh
 git switch master

@@ -18,7 +18,7 @@ let files: MapFileSession;
 const saveAs = vi.fn(async (name: string) => ({ id: "copy", name }));
 
 beforeAll(async () => {
-  window.kontarFiles = { associate: vi.fn(), save: vi.fn(), saveAs };
+  window.mapFileBridge = { associate: vi.fn(), save: vi.fn(), saveAs };
   vi.stubGlobal("$", () => ({
     dialog: (value: DialogOptions | string) => {
       if (value === "close") dialog.close();

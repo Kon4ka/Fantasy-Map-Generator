@@ -3,8 +3,8 @@ import fs from "node:fs";
 import { test } from "node:test";
 import ts from "typescript";
 
-const text = fs.readFileSync(new URL("./kontar-launch.mjs", import.meta.url), "utf8");
-const source = ts.createSourceFile("kontar-launch.mjs", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+const text = fs.readFileSync(new URL("./map-launch.mjs", import.meta.url), "utf8");
+const source = ts.createSourceFile("map-launch.mjs", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
 const launches: ts.ObjectLiteralExpression[] = [];
 function visit(node: ts.Node): void {
   if (ts.isCallExpression(node) && node.expression.getText(source) === "chromium.launchPersistentContext") {

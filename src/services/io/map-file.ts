@@ -48,7 +48,7 @@ function askName(name: string): Promise<string | null> {
 }
 
 export const MapFiles = new MapFileSession({
-  bridge: window.kontarFiles,
+  bridge: window.mapFileBridge,
   pickSave: window.showSaveFilePicker
     ? name => window.showSaveFilePicker!({ suggestedName: name, types: fileTypes })
     : undefined,

@@ -5,7 +5,7 @@ import process from "node:process";
 import { chromium } from "playwright";
 
 const root = path.resolve(import.meta.dirname, "..");
-const appUrl = process.env.KONTAR_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
+const appUrl = process.env.MAP_APP_URL ?? "http://127.0.0.1:5173/Fantasy-Map-Generator/";
 const browserOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" };
 const inputPath = path.resolve(process.argv[2] ?? "");
 const outputPath = path.resolve(process.argv[3] ?? "");

@@ -11,7 +11,7 @@ type CallAgent = (method: string, args: Json) => Promise<unknown>;
 
 const root = path.resolve(import.meta.dirname, "..");
 const INFO_PATH = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json");
-const LAUNCHER = path.join(root, "scripts", "kontar-launch.mjs");
+const LAUNCHER = path.join(root, "scripts", "map-launch.mjs");
 const NOT_RUNNING =
   "No map is open. Use world_open with a .map path to open one in the background, or ask the user to start the map launcher.";
 
@@ -207,7 +207,7 @@ async function openWorld(args: Json): Promise<unknown> {
     const status = await post("status", {});
     if (!isError(status)) return { opened: file, background: true, ...(status as Json) };
   }
-  return { error: "the background session did not start in 3 minutes; see %LOCALAPPDATA%/Kontar/launcher.log" };
+  return { error: "the background session did not start in 3 minutes; see %LOCALAPPDATA%/FantasyMapGenerator/launcher.log" };
 }
 
 export const callBridge: CallAgent = (method, args) => (method === "open" ? openWorld(args) : post(method, args));

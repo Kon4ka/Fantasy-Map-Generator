@@ -26,7 +26,7 @@
 спроси пользователя. Без открытой карты `world_open` поднимает фоновую копию редактора без окна;
 закрывай её `world_close`, когда работа закончена.
 
-`window.kontarFiles` / `kontarFileOperation` — внутренний мост сохранения лаунчера (Playwright
+`window.mapFileBridge` / `mapFileOperation` — внутренний мост сохранения лаунчера (Playwright
 `exposeBinding`), **не MCP** и не HTTP API. Сервер Vite тоже не MCP.
 
 ### Перед началом работы
@@ -48,9 +48,9 @@
 | --- | --- | --- |
 | Чтение `.map` | Сводки, поиск объектов, проверка связей, сравнение сохранений | Только сохранённое состояние |
 | Интерфейс браузера | Штатные редакторы открытой карты | Нужен инструмент браузера; не терять несохранённые правки |
-| Скрипты `scripts/kontar-*` | Узкие миграции и ремонт | Не универсальный API; сначала прочитай код |
+| Скрипты `scripts/map-*` | Узкие миграции и ремонт | Не универсальный API; сначала прочитай код |
 
-Лаунчер: [scripts/kontar-launch.cmd](../scripts/kontar-launch.cmd). Не запускай вторую копию в том же
+Лаунчер: [scripts/map-launch.cmd](../scripts/map-launch.cmd). Не запускай вторую копию в том же
 профиле, не ставь зависимости и не запускай генераторы только ради чтения карты.
 
 ### Модель мира (обязательно для любых правок)
@@ -94,10 +94,10 @@
 → проверка структуры, ID и ссылок → отчёт о файле, копии и реально выполненных проверках.
 Открытая карта после внешней правки файла остаётся старой; не нажимай «Сохранить» в старой сессии.
 
-Узкие скрипты (Node ≥ 24, из корня): `kontar-remove-religions.ts --check` — только расчёт;
-без `--check` перезаписывает файл с `.bak`. `kontar-normalize-map-svg.ts` и
-`kontar-relocate-feature-label.ts` создают новые копии. `kontar-repair-labels.mjs`,
-`kontar-clean-map.mjs`, `kontar-generate-map.mjs` меняют данные — только после чтения кода и согласования.
+Узкие скрипты (Node ≥ 24, из корня): `map-remove-religions.ts --check` — только расчёт;
+без `--check` перезаписывает файл с `.bak`. `map-normalize-map-svg.ts` и
+`map-relocate-feature-label.ts` создают новые копии. `map-repair-labels.mjs`,
+`map-clean-map.mjs`, `map-generate-world.mjs` меняют данные — только после чтения кода и согласования.
 
 ## Часть 2. План MCP-сервера
 
@@ -120,7 +120,7 @@
 Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
                           │ HTTP 127.0.0.1 + токен
                           ▼
-                       kontar-launch (Playwright) ──page.evaluate──▶ window.mapAgent (в приложении)
+                       map-launch (Playwright) ──page.evaluate──▶ window.mapAgent (в приложении)
                           │                                            ├─ query/get  (pack, options, lore)
                           └─ headless-страница для офлайн-работы       ├─ apply      (каталог операций)
                              с выбранным .map                          ├─ generate   (MAP_COMMANDS, опции)
@@ -132,7 +132,7 @@ Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
 | Слой | Файл (план) | Задача |
 | --- | --- | --- |
 | Agent API в приложении | `src/services/agent/` | Типизированные операции над миром, валидация, перерисовка, снимки |
-| Мост лаунчера | `scripts/kontar-launch.mjs` + `scripts/map-agent-bridge.ts` | Локальный HTTP на 127.0.0.1 со случайным токеном; вызывает `mapAgent` через `page.evaluate`; при необходимости открывает headless-страницу с `.map` |
+| Мост лаунчера | `scripts/map-launch.mjs` + `scripts/map-agent-bridge.ts` | Локальный HTTP на 127.0.0.1 со случайным токеном; вызывает `mapAgent` через `page.evaluate`; при необходимости открывает headless-страницу с `.map` |
 | MCP-сервер | `scripts/map-mcp.ts` | stdio, `@modelcontextprotocol/sdk`; 9 инструментов ниже; токен и порт читает из файла, который пишет лаунчер |
 
 Если лаунчер не запущен, `world_status` честно сообщает об этом и предлагает режим `open` (headless).
@@ -217,11 +217,11 @@ Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
 | Часть | Файл |
 | --- | --- |
 | Agent API в приложении | [src/services/agent/agent.ts](../src/services/agent/agent.ts), таблицы — [table.ts](../src/services/agent/table.ts) |
-| Мост лаунчера | [scripts/map-agent-bridge.ts](../scripts/map-agent-bridge.ts), стартует из `kontar-launch.mjs` после открытия карты |
+| Мост лаунчера | [scripts/map-agent-bridge.ts](../scripts/map-agent-bridge.ts), стартует из `map-launch.mjs` после открытия карты |
 | MCP-сервер | [scripts/map-mcp.ts](../scripts/map-mcp.ts), без внешних зависимостей |
 | Конфигурация Claude Code | [.mcp.json](../.mcp.json) в корне проекта |
 
-Порядок: запусти `scripts/kontar-launch.cmd` → лаунчер откроет карту и запишет адрес и токен моста
+Порядок: запусти `scripts/map-launch.cmd` → лаунчер откроет карту и запишет адрес и токен моста
 в `%LOCALAPPDATA%/FantasyMapGenerator/agent.json` → Claude Code при открытии проекта предложит включить сервер
 `fantasy-map` из `.mcp.json`. Если лаунчер не запущен, инструменты отвечают ошибкой с этой подсказкой.
 
@@ -249,7 +249,7 @@ Claude Code ──stdio──▶ map-mcp (Node, MCP SDK)
 максимум 1024) из SVG экспорта без виньетки и масштабной линейки; сущность снимается с полями.
 Это дорогой ответ (~200 токенов картинки на 512 px) — вызывай, только когда нужна картинка.
 
-Фоновый режим: `world_open` без запущенного лаунчера стартует `kontar-launch.mjs --headless --map <путь>`
+Фоновый режим: `world_open` без запущенного лаунчера стартует `map-launch.mjs --headless --map <путь>`
 с отдельным профилем браузера (`agent-browser-profile`) и ждёт мост до 3 минут; `world_close` закрывает
 браузер, лаунчер останавливает свой сервер Vite и удаляет `agent.json`. Мост открывает файлы через
 поле загрузки редактора и проверяет путь сам (только `.map`/`.gz` из разрешённых папок).
