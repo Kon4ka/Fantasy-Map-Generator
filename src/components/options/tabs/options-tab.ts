@@ -975,7 +975,8 @@ function changeEmblemShape(shape: string): void {
 
 function changeUiSize(value: number): void {
   if (Number.isNaN(value) || value < 0.5) return;
-  const size = Math.min(value, maxUiSize());
+  const max = maxUiSize();
+  const size = max >= 0.5 ? Math.min(value, max) : value; // a hidden or minimized window measures 0
 
   optionInput("uiSize").value = String(size);
   document.body.style.fontSize = `${rn(size * 10, 2)}px`;
