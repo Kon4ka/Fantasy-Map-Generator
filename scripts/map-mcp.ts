@@ -128,6 +128,20 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} }
   },
   {
+    name: "world_view",
+    method: "view",
+    description: "PNG of the map, an entity (type, id) or rect [x,y,w,h]. Costly: use only when a picture is needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: { type: "string" },
+        id: { type: ["number", "string"] },
+        rect: { type: "array", items: { type: "number" } },
+        size: { type: "number", description: "longest side in px, default 512, max 1024" }
+      }
+    }
+  },
+  {
     name: "world_undo",
     method: "undo",
     description: "Revert the last applied batches (up to 5). Refuses if the map changed since, unless force.",
@@ -221,6 +235,15 @@ export async function handle(message: Json, callAgent: CallAgent = callBridge): 
       const tool = TOOLS.find(tool => tool.name === params.name);
       if (!tool) return { jsonrpc: "2.0", id, error: { code: -32602, message: `unknown tool ${params.name}` } };
       const result = await callAgent(tool.method, (params.arguments as Json) ?? {});
+      if (typeof (result as Json)?.image === "string") {
+        const { image, ...rest } = result as Json;
+        return reply({
+          content: [
+            { type: "image", data: image, mimeType: "image/png" },
+            { type: "text", text: JSON.stringify(rest) }
+          ]
+        });
+      }
       return reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: isError(result) });
     }
     default:

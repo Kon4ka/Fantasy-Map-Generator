@@ -5,7 +5,7 @@ import http from "node:http";
 import path from "node:path";
 import type { Page } from "playwright";
 
-export const AGENT_METHODS = ["status", "schema", "query", "get", "apply", "undo", "generate", "save"];
+export const AGENT_METHODS = ["status", "schema", "query", "get", "apply", "undo", "generate", "save", "view"];
 const MAX_BODY = 1_000_000;
 
 export interface AgentBridge {

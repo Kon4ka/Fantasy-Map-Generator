@@ -164,6 +164,65 @@ const waitFor = async (done: () => boolean, timeout: number) => {
   }
 };
 
+/** The map area to picture: an entity with some margin, a rectangle, or the whole map */
+function viewRect(args: { type?: string; id?: number | string; rect?: number[] }): [number, number, number, number] {
+  const { width, height } = options.map.graph;
+  if (args.rect) {
+    const [x, y, w, h] = args.rect;
+    if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) throw new Error("rect must be [x, y, width, height]");
+    return [x, y, w, h];
+  }
+  if (!args.type) return [0, 0, width, height];
+  assertType(args.type);
+  if (args.type === "layer") throw new Error("view a layer by turning it on, then view the map");
+  const ref = typeof args.id === "string" ? MapEntities.parseKey(args.id) : { type: args.type, id: Number(args.id) };
+  if (!ref || !MapEntities.get(ref)) throw new Error(`${args.type} ${args.id} not found`);
+  const points = MapEntities.getPoints(ref);
+  const position = MapEntities.getPosition(ref);
+  const all = points.length ? points : position ? [position] : [];
+  if (!all.length) throw new Error(`${args.type} ${args.id} has no place on the map`);
+  const xs = all.map(point => point[0]);
+  const ys = all.map(point => point[1]);
+  const margin = Math.max(40, (Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys)) * 0.15);
+  const x = Math.max(0, Math.min(...xs) - margin);
+  const y = Math.max(0, Math.min(...ys) - margin);
+  return [x, y, Math.min(width, Math.max(...xs) + margin) - x, Math.min(height, Math.max(...ys) + margin) - y];
+}
+
+/** A PNG of part of the map, rendered from the export SVG at the asked size (longest side, max 1024 px) */
+async function view(args: { type?: string; id?: number | string; rect?: number[]; size?: number }) {
+  const [x, y, w, h] = viewRect(args);
+  const size = Math.min(Math.max(Number(args.size) || 512, 64), 1024);
+  const scale = size / Math.max(w, h);
+  const [pixelsX, pixelsY] = [Math.round(w * scale), Math.round(h * scale)];
+
+  const { ExportMap } = await import("@/services/io/export");
+  const svgText = await (await fetch(await ExportMap.getMapURL("png", { fullMap: true, noVignette: true, noScaleBar: true }))).text();
+  const svg = new DOMParser().parseFromString(svgText, "image/svg+xml").documentElement;
+  svg.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+  svg.setAttribute("width", String(pixelsX));
+  svg.setAttribute("height", String(pixelsY));
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }));
+  try {
+    const load = async () => {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      return image;
+    };
+    await load(); // the first decode only starts the embedded fonts; text is drawn from the second
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const image = await load();
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelsX;
+    canvas.height = pixelsY;
+    canvas.getContext("2d")!.drawImage(image, 0, 0, pixelsX, pixelsY);
+    return { image: canvas.toDataURL("image/png").split(",")[1], rect: compact([x, y, w, h]) };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Write the map to its file, or to a new file named by the agent (saveAs) */
 async function save(args: { mode?: string; name?: string }) {
   if (customization) return { error: "the map is in an edit mode; finish it in the editor first" };
@@ -249,7 +308,7 @@ function schema(args: { type?: string } = {}) {
       types: [...ENTITY_TYPES, "layer"],
       pseudo: { lore: "world_get type=lore: name, description, calendar" },
       where: '{field: value | {like, gt, lt, in, ne}}; refs compare by id, "like" by name',
-      methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save"],
+      methods: ["status", "schema", "query", "get", "apply", "undo", "generate", "save", "view"],
       ops: OPERATIONS
     };
   }
@@ -293,7 +352,7 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save };
+const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save, view };
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
 async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {
