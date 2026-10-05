@@ -10,6 +10,7 @@ export interface CellSelector {
   circle?: [number, number, number]; // x, y, radius in map units
   polygon?: Point[];
   cells?: number[];
+  water?: boolean; // include water cells (zones only); territories are land
 }
 
 const ASSIGNMENT: Record<TerritoryType, () => ArrayLike<number>> = {
@@ -123,7 +124,7 @@ const inPolygon = ([x, y]: Point, polygon: Point[]) => {
 /** Land cells matching every given selector */
 export function selectCells(selector: CellSelector): number[] {
   const { cells } = pack;
-  const tests: ((cell: number) => boolean)[] = [cell => cells.h[cell] >= 20];
+  const tests: ((cell: number) => boolean)[] = [cell => selector.water === true || cells.h[cell] >= 20];
 
   if (selector.feature !== undefined) tests.push(cell => cells.f[cell] === selector.feature);
   if (selector.of) {

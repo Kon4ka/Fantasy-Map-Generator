@@ -72,6 +72,9 @@ Ops for `world_apply`:
 | `create` | `marker {x, y, name, markerType?, icon?, note?}`, `addedLabel {x, y, text, featureId?}`, `burg {x, y, name?, note?}`, `state {x, y, name?, color?, cells?}`, `province {x, y, name?, color?, cells?}`, `culture {x, y, name?, color?, cells?}`, `route {from, to, group?, name?}` | coordinates are map units (`world_status.size`); a state gets a capital burg at x,y; a province stays inside the state at x,y; a route follows the cheapest land path (`roads`, `trails`) or sea path (`searoutes`) between `[x, y]` or `{burg: id}` points |
 | `remove` | `{op:"remove", type: marker\|addedLabel\|burg, id}` | removing a capital leaves its state without one |
 | `style` | `{op:"style", path:"states.statesBody.attrs.opacity", value}` | existing `attrs`/`options` values only, same type; read paths with `world_get type:"style"` |
+| `zoneLayer` | `{op:"zoneLayer", name, opacity?, blur?, stroke?, hidden?, rename?, remove?}` | user layers (fog, curses, migrations…): creates the layer if new, else restyles, renames or removes it (`remove:"withZones"` deletes its zones too); list them with `world_get {type:"style", path:"zones.options.layers"}` |
+| `create` zone | `{op:"create", type:"zone", layer, name?, color?, note?, cells: {…, water: true}}` | a zone of a user layer; `water: true` lets the selector take sea cells (zones only); `color` is `#rrggbb` or `url(#hatchN)` |
+| `zoneCells` | `{op:"zoneCells", id, add?: {…}, remove?: {…}}` | grow or trim a zone with cell selectors; `remove {type:"zone", id}` deletes it |
 | `layer` | `{op:"layer", id, on}` | layer ids: `world_query {type:"layer"}` |
 | `lore` | `{op:"lore", name?, description?, year?, era?, eraShort?}` | |
 

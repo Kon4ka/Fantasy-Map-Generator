@@ -197,7 +197,23 @@ export const stylesSchema = z.strictObject({
     })
   }),
   provinces: z.strictObject({ attrs: z.strictObject({ opacity, filter }) }),
-  zones: z.strictObject({ attrs: z.strictObject({ opacity, ...strokeAttrs, filter, mask }) }),
+  zones: z.strictObject({
+    attrs: z.strictObject({ opacity, ...strokeAttrs, filter, mask }),
+    // user layers: each zone type listed here gets its own toggle and look
+    options: z
+      .strictObject({
+        layers: z.record(
+          z.string().min(1),
+          z.strictObject({
+            hidden: z.boolean(),
+            opacity: z.number().min(0).max(1),
+            blur: z.number().min(0).max(20),
+            stroke: z.boolean()
+          })
+        )
+      })
+      .default({ layers: {} })
+  }),
   borders: z.strictObject({
     stateBorders: z.strictObject({ attrs: z.strictObject({ opacity, ...strokeAttrs, filter }) }),
     provinceBorders: z.strictObject({ attrs: z.strictObject({ opacity, ...strokeAttrs, filter }) })

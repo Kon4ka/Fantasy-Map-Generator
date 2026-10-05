@@ -425,6 +425,9 @@
       "stroke-linecap": "butt",
       "filter": null,
       "mask": null
+    },
+    "options": {
+      "layers": {}
     }
   },
   "borders": {
@@ -1192,7 +1195,7 @@
     "options": {
       "size": 3,
       "fontSize": 5,
-      "icon": "\u2696\ufe0f"
+      "icon": "⚖️"
     }
   },
   "trade": {

@@ -3,6 +3,7 @@ import { refreshEditors } from "@/components/dialog/dialog-helpers";
 import { type LayerId, Layers } from "@/components/layers";
 import { ENTITY_TYPES, type EntityRef, type EntityType, MapEntities } from "@/components/map-entities";
 import { Notes } from "@/components/notes";
+import { ZoneLayers } from "@/components/zone-layers";
 import { redrawEmblem, removeEmblem } from "@/renderers/draw-emblems";
 import {
   assertTerritory,
@@ -113,7 +114,8 @@ function planRelocate(burgId: number, x: unknown, y: unknown): Planned {
   const burg = pack.burgs[burgId];
   const cell = Pack.findCell(x as number, y as number, Infinity, pack) as number;
   if (pack.cells.h[cell] < 20) fail(`${x},${y} is water`);
-  if (pack.cells.burg[cell] && pack.cells.burg[cell] !== burgId) fail(`cell ${cell} already has burg ${pack.cells.burg[cell]}`);
+  if (pack.cells.burg[cell] && pack.cells.burg[cell] !== burgId)
+    fail(`cell ${cell} already has burg ${pack.cells.burg[cell]}`);
   const state = pack.cells.state[cell];
   if (burg.capital && state !== burg.state) fail("a capital cannot move into another state");
   const moved = state !== burg.state ? ` (state ${burg.state} → ${state})` : "";
@@ -144,7 +146,9 @@ function planSet(op: Op): Planned[] {
     if (x !== undefined || y !== undefined) steps.push(planRelocate(ref.id, x ?? entity.x, y ?? entity.y));
     if (state !== undefined) {
       if (entity.capital) fail("a capital cannot change state; make another burg the capital first");
-      steps.push(...planAssign({ op: "assign", type: "state", id: state as number, cells: { cells: [entity.cell as number] } }));
+      steps.push(
+        ...planAssign({ op: "assign", type: "state", id: state as number, cells: { cells: [entity.cell as number] } })
+      );
     }
     return [...steps, ...(hasMore(rest) ? planSet(rest) : [])];
   }
@@ -197,7 +201,8 @@ function planNewTerritory(op: Op, x: number, y: number): Planned[] {
   if (pack.cells.h[center] < 20) fail(`${x},${y} is water`);
   if (type === "province") {
     if (!pack.cells.state[center]) fail(`${x},${y} is neutral land; a province needs a state`);
-    if (pack.provinces.some(p => p && !p.removed && p.center === center)) fail(`${x},${y} is already a province center`);
+    if (pack.provinces.some(p => p && !p.removed && p.center === center))
+      fail(`${x},${y} is already a province center`);
   } else if (pack.cultures.some(c => c && !c.removed && c.center === center)) {
     fail(`${x},${y} is already a culture center`);
   }
@@ -258,6 +263,7 @@ function planRoute(op: Op): Planned[] {
 
 function planCreate(op: Op): Planned[] {
   if (op.type === "route") return planRoute(op);
+  if (op.type === "zone") return planZone(op);
   const { x, y } = op;
   checkValue("x", x);
   checkValue("y", y);
@@ -371,7 +377,8 @@ function planStyle(op: Op): Planned[] {
   let node: Record<string, unknown> = styles as unknown as Record<string, unknown>;
   for (const key of keys.slice(0, -1)) {
     const next = node[key];
-    if (typeof next !== "object" || next === null) fail(`style path "${op.path}" not found; read it with world_get type=style`);
+    if (typeof next !== "object" || next === null)
+      fail(`style path "${op.path}" not found; read it with world_get type=style`);
     node = next as Record<string, unknown>;
   }
   const field = keys.at(-1)!;
@@ -414,10 +421,19 @@ function planRemove(op: Op): Planned[] {
       { summary: `remove marker ${op.id} ${name}`, layers: ["markers"], run: () => Markers.deleteMarker(ref.id) }
     ];
   }
+  if (type === "zone") {
+    return [
+      {
+        summary: `remove zone ${op.id} ${name}`,
+        layers: ["zones"],
+        run: () => (pack.zones = pack.zones.filter(zone => zone.i !== ref.id))
+      }
+    ];
+  }
   if (type === "addedLabel") {
     return [{ summary: `remove label ${op.id} ${name}`, layers: ["labels"], run: () => AddedLabels.remove(ref.id) }];
   }
-  return fail(`remove supports marker, addedLabel and burg, not "${type}"`);
+  return fail(`remove supports marker, addedLabel, burg and zone, not "${type}"`);
 }
 
 function planLayer(op: Op): Planned[] {
@@ -462,6 +478,7 @@ function planAssign(op: Op): Planned[] {
   const id = op.id as number;
   if (typeof op.cells !== "object" || op.cells === null)
     fail("assign needs cells: {feature | of | circle | polygon | cells}");
+  if ((op.cells as CellSelector).water) fail("water cells are for zones only");
   const changes = changesFor(type, id, selectCells(op.cells as CellSelector));
   if (!changes.size) return [];
   const name = MapEntities.getName({ type, id }) || "none";
@@ -492,7 +509,106 @@ function planMerge(op: Op): Planned[] {
   });
 }
 
+/** Create, restyle, rename or remove a user layer: {name, opacity?, blur?, stroke?, hidden?, rename?, remove?} */
+function planZoneLayer(op: Op): Planned[] {
+  const name = typeof op.name === "string" ? op.name.trim() : "";
+  if (!name) fail("zoneLayer needs name");
+  const style = Object.fromEntries(
+    ["opacity", "blur", "stroke", "hidden"].filter(key => op[key] !== undefined).map(key => [key, op[key]])
+  );
+  if (op.remove !== undefined) {
+    if (!ZoneLayers.has(name)) fail(`layer "${name}" not found`);
+    const withZones = op.remove === "withZones";
+    const zones = ZoneLayers.countZones(name);
+    return [
+      {
+        summary: `remove layer "${name}"; its ${zones} zones ${withZones ? "are deleted" : "stay as ordinary zones"}`,
+        layers: [],
+        run: () => ZoneLayers.remove(name, withZones)
+      }
+    ];
+  }
+  if (!ZoneLayers.has(name)) {
+    return [{ summary: `create layer "${name}"`, layers: [], run: () => void ZoneLayers.create(name, style) }];
+  }
+  const steps: Planned[] = [];
+  if (Object.keys(style).length) {
+    steps.push({
+      summary: `layer "${name}": ${JSON.stringify(style)}`,
+      layers: [],
+      run: () => ZoneLayers.update(name, style)
+    });
+  }
+  if (op.rename !== undefined) {
+    if (typeof op.rename !== "string" || !op.rename.trim()) fail("rename must be a name");
+    if (ZoneLayers.has((op.rename as string).trim())) fail(`layer "${op.rename}" already exists`);
+    steps.push({
+      summary: `rename layer "${name}" → "${op.rename}"`,
+      layers: [],
+      run: () => void ZoneLayers.rename(name, op.rename)
+    });
+  }
+  if (!steps.length) fail(`layer "${name}" exists; pass opacity, blur, stroke, hidden, rename or remove`);
+  return steps;
+}
+
+/** A zone of a user layer (or any zone type): {layer | zoneType, name, color?, cells: selector incl. water} */
+function planZone(op: Op): Planned[] {
+  const zoneType = (op.layer ?? op.zoneType) as string | undefined;
+  if (typeof zoneType !== "string" || !zoneType.trim()) fail("a zone needs layer (a user layer) or zoneType");
+  if (op.layer !== undefined && !ZoneLayers.has(zoneType!))
+    fail(`layer "${zoneType}" not found; create it with zoneLayer`);
+  if (op.name !== undefined) checkValue("name", op.name);
+  if (
+    op.color !== undefined &&
+    !(typeof op.color === "string" && /^(#[0-9a-f]{6}|url\(#hatch\d+\))$/i.test(op.color))
+  ) {
+    fail("color must be #rrggbb or url(#hatchN)");
+  }
+  if (op.note !== undefined) checkValue("note", op.note);
+  const cells = selectCells((op.cells ?? {}) as CellSelector);
+  if (!cells.length) fail("the selector picks no cells");
+  const id = pack.zones.length ? Math.max(...pack.zones.map(zone => zone.i)) + 1 : 0;
+  return [
+    {
+      summary: `create zone ${id} "${op.name ?? zoneType}" in "${zoneType}" with ${cells.length} cells`,
+      layers: ["zones"],
+      run: () => {
+        const zone = {
+          i: id,
+          name: (op.name as string) ?? zoneType!,
+          type: zoneType!,
+          cells,
+          color: (op.color as string) ?? `url(#hatch${id % 42})`
+        };
+        pack.zones.push(op.note ? { ...zone, note: op.note as string } : zone);
+        if (!Layers.isOn("zones")) Layers.show("zones");
+      }
+    }
+  ];
+}
+
+/** Grow or trim a zone: {id, add?: selector, remove?: selector} */
+function planZoneCells(op: Op): Planned[] {
+  const zone = pack.zones.find(z => z.i === Number(op.id));
+  if (!zone) return fail(`zone ${op.id} not found`);
+  const add = op.add ? selectCells(op.add as CellSelector) : [];
+  const drop = new Set(op.remove ? selectCells(op.remove as CellSelector) : []);
+  const next = new Set(zone.cells.filter(cell => !drop.has(cell)));
+  for (const cell of add) next.add(cell);
+  if (!op.add && !op.remove) fail("zoneCells needs add or remove");
+  return [
+    {
+      summary: `zone ${zone.i} "${zone.name}": ${zone.cells.length} → ${next.size} cells`,
+      layers: ["zones"],
+      run: () => (zone.cells = [...next])
+    }
+  ];
+}
+
 const PLANNERS: Record<string, (op: Op) => Planned[]> = {
+  zoneLayer: planZoneLayer,
+  zoneCells: planZoneCells,
   assign: planAssign,
   merge: planMerge,
   split: planSplit,

@@ -2,6 +2,8 @@
 import type { LayerId } from "@/components/layers";
 import { Layers } from "@/components/layers";
 import { CATEGORIES, type Category, iconHTML } from "@/components/options/panel-icons";
+import { ZoneLayerDialog } from "@/components/options/zone-layer-dialog";
+import { ZoneLayers } from "@/components/zone-layers";
 import { ViewportLayers } from "@/renderers/viewport/viewport-renderer";
 import { isCtrlClick } from "@/utils";
 import { ensureEl, findEl } from "@/utils/nodeUtils";
@@ -181,11 +183,47 @@ function render(): void {
     container.insertAdjacentHTML("beforeend", `<div class="panel-category">${label}</div>`);
     container.append(list);
   }
+  container.append(...renderUserLayers());
   makeSortable();
 }
 
+/** "My layers": one toggle per user layer, plus the button that makes a new one */
+function renderUserLayers(): Node[] {
+  const header = document.createElement("div");
+  header.className = "panel-category";
+  header.textContent = "My layers";
+  const list = document.createElement("ul");
+  list.className = "layer-list user-layers";
+  for (const name of ZoneLayers.list()) {
+    const item = document.createElement("li");
+    item.dataset.zoneLayer = name;
+    item.dataset.tip = "Click to toggle the layer, Ctrl + click to change it, edit its zones or delete it";
+    item.classList.toggle("buttonoff", Boolean(ZoneLayers.get(name)?.hidden) || !Layers.isOn("zones"));
+    item.innerHTML = `${iconHTML("cloud")}<span class="layer-label" translate="no"></span>`;
+    item.querySelector(".layer-label")!.textContent = name;
+    list.append(item);
+  }
+  const add = document.createElement("li");
+  add.dataset.zoneLayerAdd = "";
+  add.dataset.tip = "Create a layer of your own: an area such as fog, curse or migration, drawn from zones";
+  add.innerHTML = `${iconHTML("plus")}<span class="layer-label">New layer</span>`;
+  list.append(add);
+  return [header, list];
+}
+
+ZoneLayers.onChange(render);
+
 ensureEl("mapLayers").addEventListener("click", event => {
-  const id = (event.target as HTMLElement).closest("li")?.dataset.layer;
+  const item = (event.target as HTMLElement).closest("li");
+  if (item?.dataset.zoneLayerAdd !== undefined) return ZoneLayerDialog.open();
+  const userLayer = item?.dataset.zoneLayer;
+  if (userLayer) {
+    if (isCtrlClick(event)) return ZoneLayerDialog.open(userLayer);
+    const hidden = ZoneLayers.get(userLayer)?.hidden;
+    if (!Layers.isOn("zones")) return ZoneLayers.update(userLayer, { hidden: false });
+    return ZoneLayers.update(userLayer, { hidden: !hidden });
+  }
+  const id = item?.dataset.layer;
   if (!id || !Layers.has(id)) return;
 
   if (isCtrlClick(event)) return void editStyle(Layers.get(id).elementId);
@@ -194,7 +232,7 @@ ensureEl("mapLayers").addEventListener("click", event => {
 
 // move layers on dragging within a category. TODO: deprecate jQuery
 function makeSortable(): void {
-  $("#mapLayers .layer-list").sortable({
+  $("#mapLayers .layer-list:not(.user-layers)").sortable({
     items: "li:not(.solid)",
     containment: "parent",
     cancel: ".solid",

@@ -54,4 +54,20 @@ describe("drawZones", () => {
 
     expect(drawnIds()).toEqual([]);
   });
+  it("groups a user layer with its own look and hides it when the layer is hidden", () => {
+    globalThis.styles = {
+      zones: { options: { layers: { Rebels: { hidden: false, opacity: 0.5, blur: 4, stroke: false } } } }
+    } as never;
+
+    drawZones();
+    const group = document.querySelector('[data-zone-layer="Rebels"]');
+    expect(group?.getAttribute("opacity")).toBe("0.5");
+    expect(group?.getAttribute("filter")).toBe("blur(4px)");
+    expect(group?.querySelector("path")?.id).toBe("zone2");
+
+    globalThis.styles.zones.options.layers.Rebels.hidden = true;
+    drawZones();
+    expect(drawnIds()).toEqual(["0", "1"]);
+    globalThis.styles = undefined as never;
+  });
 });

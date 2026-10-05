@@ -112,13 +112,14 @@ function revision(): string {
   };
   for (const type of ENTITY_TYPES) {
     for (const { ref, entity } of MapEntities.collect(type)) {
-      const { name, color, note, x, y, label } = entity as unknown as Record<string, unknown>;
+      const { name, color, note, x, y, label, cells, type: kind } = entity as unknown as Record<string, unknown>;
       add(
-        `${type}${MapEntities.key(ref)}${name}${color}${(note as string)?.length}${x},${y}${(label as { text?: string })?.text}`
+        `${type}${MapEntities.key(ref)}${name}${color}${(note as string)?.length}${x},${y}${(label as { text?: string })?.text}${Array.isArray(cells) ? cells.length : ""}${kind}`
       );
     }
   }
   add(Layers.all.map(layer => +Layers.isOn(layer.id)).join("") + JSON.stringify(options.map.lore));
+  add(JSON.stringify(styles.zones.options?.layers ?? {}));
   return (hash >>> 0).toString(36);
 }
 
@@ -197,7 +198,9 @@ async function view(args: { type?: string; id?: number | string; rect?: number[]
   const [pixelsX, pixelsY] = [Math.round(w * scale), Math.round(h * scale)];
 
   const { ExportMap } = await import("@/services/io/export");
-  const svgText = await (await fetch(await ExportMap.getMapURL("png", { fullMap: true, noVignette: true, noScaleBar: true }))).text();
+  const svgText = await (
+    await fetch(await ExportMap.getMapURL("png", { fullMap: true, noVignette: true, noScaleBar: true }))
+  ).text();
   const svg = new DOMParser().parseFromString(svgText, "image/svg+xml").documentElement;
   svg.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
   svg.setAttribute("width", String(pixelsX));
@@ -442,7 +445,18 @@ function get(args: { type?: string; ids?: (number | string)[]; fields?: string[]
   });
 }
 
-const METHODS: Record<string, (args: never) => unknown> = { status, schema, query, get, apply, undo, generate, save, view, measure };
+const METHODS: Record<string, (args: never) => unknown> = {
+  status,
+  schema,
+  query,
+  get,
+  apply,
+  undo,
+  generate,
+  save,
+  view,
+  measure
+};
 
 /** Single entry point: never throws, so the bridge always gets JSON back */
 async function call(method: string, args: Record<string, unknown> = {}): Promise<unknown> {

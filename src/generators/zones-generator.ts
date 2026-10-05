@@ -47,7 +47,9 @@ class ZonesModule {
 
   generate(globalModifier = 1) {
     const usedCells = new Uint8Array(pack.cells.i.length);
-    pack.zones = [];
+    // zones of user layers are authored, not generated: they survive regeneration
+    const layers = styles.zones.options?.layers ?? {};
+    pack.zones = (pack.zones ?? []).filter(zone => Object.hasOwn(layers, zone.type)).map((zone, i) => ({ ...zone, i }));
 
     Object.values(this.config).forEach(type => {
       const expectedNumber = type.quantity * globalModifier;
