@@ -48,6 +48,8 @@
     "Yellowtail"
   ],
   "messages": {
+    "Paint": "Нарисовать",
+    "Zones list": "Список зон",
     "My layers": "Мои слои",
     "New layer": "Новый слой",
     "Layer settings": "Настройки слоя",

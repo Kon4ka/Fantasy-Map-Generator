@@ -26,6 +26,8 @@ interface CommonPaintEditorOptions {
   items: readonly PaintEditorItem[];
   dontOverrideControl?: boolean;
   landOnlyControl?: boolean;
+  landOnlyDefault?: boolean; // the land-only box starts checked unless false
+  initialId?: number; // the paint selected on open
 }
 
 export interface PaintEditorOptions extends CommonPaintEditorOptions {
@@ -94,6 +96,7 @@ function open(options: OpenPaintEditorOptions): void {
   try {
     renderDialog(options, items);
     renderItems(items);
+    if (options.initialId !== undefined) selectItem(options.initialId);
     openPaintOverlay();
     addListeners();
 
@@ -126,7 +129,7 @@ function renderDialog(options: OpenPaintEditorOptions, items: readonly PaintEdit
     ? `<label data-tip="Only paint cells whose current value is 0 (neutral)" style="display: flex; align-items: center"><input id="paintEditorDontOverride" class="checkbox native" type="checkbox">Do not override existing</label>`
     : "";
   const landOnlyControl = options.landOnlyControl
-    ? `<label style="display: flex; align-items: center"><input id="paintEditorLandOnly" class="checkbox native" type="checkbox" checked> Change land only</label>`
+    ? `<label style="display: flex; align-items: center"><input id="paintEditorLandOnly" class="checkbox native" type="checkbox" ${options.landOnlyDefault === false ? "" : "checked"}> Change land only</label>`
     : "";
   const html = /* html */ `<div id="${dialogId}" class="dialog" style="display: flex; flex-direction: column; gap: 0.6em">
     <div style="display: grid; gap: 0.5em;">

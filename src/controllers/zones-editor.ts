@@ -114,7 +114,7 @@ function renderDialog(): void {
   ensureEl("zonesEditStyle").addEventListener("click", () => editStyle("zones"));
   ensureEl("zonesLegend").addEventListener("click", toggleLegend);
   ensureEl("zonesPercentage").addEventListener("click", togglePercentageMode);
-  ensureEl("zonesManually").addEventListener("click", openPaintEditor);
+  ensureEl("zonesManually").addEventListener("click", () => openPaintEditor());
   ensureEl("zonesAdd").addEventListener("click", addZonesLayer);
   ensureEl("zonesExport").addEventListener("click", downloadZonesData);
 
@@ -273,7 +273,7 @@ function movezone(_ev: unknown, ui: { item: ArrayLike<HTMLElement> & { index(): 
   Layers.draw("zones");
 }
 
-function openPaintEditor(): void {
+function openPaintEditor(initialId?: number, landOnly = true): void {
   Layers.show("zones");
 
   const visibleZones = getZonesData()
@@ -299,6 +299,8 @@ function openPaintEditor(): void {
       ...visibleZones.map(zone => ({ id: zone.i, name: zone.name, color: zone.color }))
     ],
     landOnlyControl: true,
+    landOnlyDefault: landOnly,
+    initialId,
     getValue: cell => zonesByCell.get(cell) ?? [],
     onApply: changes => applyZonePaint(visibleZones, changes)
   });
@@ -501,4 +503,10 @@ function zoneRemove(zone: Zone): void {
   });
 }
 
-export const ZonesEditor = { open, exportCsv: downloadZonesData };
+/** Open the editor and go straight to the brush, for the zones the filter shows; user layers may cover the sea */
+function paint(zoneId?: number, landOnly = true): void {
+  open();
+  openPaintEditor(zoneId, landOnly);
+}
+
+export const ZonesEditor = { open, paint, exportCsv: downloadZonesData };

@@ -37,15 +37,20 @@ function open(name?: string): void {
   });
 
   const close = () => $(`#${DIALOG_ID}`).dialog("close");
-  const editZones = async (addZone: boolean) => {
+  /** The brush over the zones of this layer; an empty zone is added to paint if the layer has none */
+  const editZones = async (paint: boolean) => {
     if (!current) return;
-    if (addZone) {
+    const layer = current;
+    let target = pack.zones.find(zone => zone.type === layer && !zone.cells.length);
+    if (paint && !target) {
       const id = pack.zones.length ? Math.max(...pack.zones.map(zone => zone.i)) + 1 : 0;
-      pack.zones.push({ i: id, name: current, type: current, color: `url(#hatch${id % 42})`, cells: [] });
+      target = { i: id, name: layer, type: layer, color: `url(#hatch${id % 42})`, cells: [] };
+      pack.zones.push(target);
     }
-    zonesFilter.type = current;
+    zonesFilter.type = layer;
     close();
-    await Controllers.ZonesEditor.open();
+    if (paint) await Controllers.ZonesEditor.paint(target?.i ?? pack.zones.find(zone => zone.type === layer)?.i, false);
+    else await Controllers.ZonesEditor.open();
   };
 
   const buttons: Record<string, () => void> = isNew
@@ -61,8 +66,8 @@ function open(name?: string): void {
         Cancel: close
       }
     : {
-        "Add zone": () => void editZones(true),
-        "Edit zones": () => void editZones(false),
+        Paint: () => void editZones(true),
+        "Zones list": () => void editZones(false),
         Delete: () =>
           confirmationDialog({
             title: "Delete layer",
