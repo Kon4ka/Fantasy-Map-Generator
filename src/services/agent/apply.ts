@@ -514,7 +514,7 @@ function planZoneLayer(op: Op): Planned[] {
   const name = typeof op.name === "string" ? op.name.trim() : "";
   if (!name) fail("zoneLayer needs name");
   const style = Object.fromEntries(
-    ["opacity", "blur", "stroke", "hidden"].filter(key => op[key] !== undefined).map(key => [key, op[key]])
+    ["opacity", "blur", "stroke", "hidden", "water"].filter(key => op[key] !== undefined).map(key => [key, op[key]])
   );
   if (op.remove !== undefined) {
     if (!ZoneLayers.has(name)) fail(`layer "${name}" not found`);
@@ -552,6 +552,10 @@ function planZoneLayer(op: Op): Planned[] {
   return steps;
 }
 
+/** A user layer that may cover water lets its zone selectors take water unless they say otherwise */
+const withLayerWater = (selector: CellSelector, zoneType: string): CellSelector =>
+  selector.water === undefined && ZoneLayers.get(zoneType)?.water ? { ...selector, water: true } : selector;
+
 /** A zone of a user layer (or any zone type): {layer | zoneType, name, color?, cells: selector incl. water} */
 function planZone(op: Op): Planned[] {
   const zoneType = (op.layer ?? op.zoneType) as string | undefined;
@@ -566,7 +570,7 @@ function planZone(op: Op): Planned[] {
     fail("color must be #rrggbb or url(#hatchN)");
   }
   if (op.note !== undefined) checkValue("note", op.note);
-  const cells = selectCells((op.cells ?? {}) as CellSelector);
+  const cells = selectCells(withLayerWater((op.cells ?? {}) as CellSelector, zoneType!));
   if (!cells.length) fail("the selector picks no cells");
   const id = pack.zones.length ? Math.max(...pack.zones.map(zone => zone.i)) + 1 : 0;
   return [
@@ -592,8 +596,8 @@ function planZone(op: Op): Planned[] {
 function planZoneCells(op: Op): Planned[] {
   const zone = pack.zones.find(z => z.i === Number(op.id));
   if (!zone) return fail(`zone ${op.id} not found`);
-  const add = op.add ? selectCells(op.add as CellSelector) : [];
-  const drop = new Set(op.remove ? selectCells(op.remove as CellSelector) : []);
+  const add = op.add ? selectCells(withLayerWater(op.add as CellSelector, zone.type)) : [];
+  const drop = new Set(op.remove ? selectCells(withLayerWater(op.remove as CellSelector, zone.type)) : []);
   const next = new Set(zone.cells.filter(cell => !drop.has(cell)));
   for (const cell of add) next.add(cell);
   if (!op.add && !op.remove) fail("zoneCells needs add or remove");

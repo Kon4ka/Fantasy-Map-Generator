@@ -20,12 +20,13 @@ function open(name?: string): void {
   const read = () => ({
     opacity: Number(field<HTMLInputElement>("opacity").value),
     blur: Number(field<HTMLInputElement>("blur").value),
-    stroke: field<HTMLInputElement>("stroke").checked
+    stroke: field<HTMLInputElement>("stroke").checked,
+    water: field<HTMLInputElement>("water").checked
   });
   const apply = () => {
     if (current) ZoneLayers.update(current, read());
   };
-  for (const key of ["opacity", "blur", "stroke"]) field(key).addEventListener("input", apply);
+  for (const key of ["opacity", "blur", "stroke", "water"]) field(key).addEventListener("input", apply);
   field<HTMLInputElement>("name").addEventListener("change", event => {
     if (!current) return;
     try {
@@ -49,7 +50,7 @@ function open(name?: string): void {
     }
     zonesFilter.type = layer;
     close();
-    if (paint) await Controllers.ZonesEditor.paint(target?.i ?? pack.zones.find(zone => zone.type === layer)?.i, false);
+    if (paint) await Controllers.ZonesEditor.paint(target?.i ?? pack.zones.find(zone => zone.type === layer)?.i, !ZoneLayers.get(layer)?.water);
     else await Controllers.ZonesEditor.open();
   };
 
@@ -110,6 +111,10 @@ function render(name: string, style: typeof DEFAULT_ZONE_LAYER, isNew: boolean):
         <tr data-tip="Draw the zone outlines">
           <td>Outline</td>
           <td><input id="${DIALOG_ID}_stroke" type="checkbox" ${style.stroke ? "checked" : ""} /></td>
+        </tr>
+        <tr data-tip="Let the brush paint this layer over seas and lakes, not only over land">
+          <td>Over water</td>
+          <td><input id="${DIALOG_ID}_water" type="checkbox" ${style.water ? "checked" : ""} /></td>
         </tr>
       </table>
       ${isNew ? "" : `<p style="margin: .5em 0 0">Zones: ${ZoneLayers.countZones(name)}</p>`}

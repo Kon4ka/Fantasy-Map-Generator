@@ -75,7 +75,7 @@ const TOOLS = [
         ops: {
           type: "array",
           description:
-            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | set state capital:burgId; set burg x,y|state | merge {type:state,id,ids} | split {type:state,id,x,y,cells,name?,color?} | create {type:marker|addedLabel|burg|state|province|culture,x,y,name|text,cells?…} or {type:route,from,to,group?,name?} (points [x,y] or {burg}) | remove {type:marker|addedLabel|burg,id} | layer {id,on} | zoneLayer {name,opacity?,blur?,stroke?,hidden?,rename?,remove?} (user layers) | create {type:zone,layer,name,color?,cells:{…,water?}} | zoneCells {id,add?,remove?} | remove {type:zone,id} | style {path,value} | lore {name?,description?,year?,era?}. Fields: world_schema",
+            "set {type,id,field:value…} | assign {type:state|province|culture|religion,id,cells:{feature|of:{type,id}|circle:[x,y,r]|polygon|cells}} | set state capital:burgId; set burg x,y|state | merge {type:state,id,ids} | split {type:state,id,x,y,cells,name?,color?} | create {type:marker|addedLabel|burg|state|province|culture,x,y,name|text,cells?…} or {type:route,from,to,group?,name?} (points [x,y] or {burg}) | remove {type:marker|addedLabel|burg,id} | layer {id,on} | zoneLayer {name,opacity?,blur?,stroke?,water?,hidden?,rename?,remove?} (user layers) | create {type:zone,layer,name,color?,cells:{…,water?}} | zoneCells {id,add?,remove?} | remove {type:zone,id} | style {path,value} | lore {name?,description?,year?,era?}. Fields: world_schema",
           items: { type: "object" }
         },
         dryRun: { type: "boolean" },

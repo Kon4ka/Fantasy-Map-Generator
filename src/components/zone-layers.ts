@@ -6,9 +6,10 @@ export interface ZoneLayerStyle {
   opacity: number;
   blur: number; // px of edge blur, 0 for crisp
   stroke: boolean;
+  water: boolean; // zones may cover water cells
 }
 
-export const DEFAULT_ZONE_LAYER: ZoneLayerStyle = { hidden: false, opacity: 1, blur: 0, stroke: false }; // opacity multiplies the Zones layer one
+export const DEFAULT_ZONE_LAYER: ZoneLayerStyle = { hidden: false, opacity: 1, blur: 0, stroke: false, water: true }; // opacity multiplies the Zones layer one
 const MAX_NAME = 60;
 
 const listeners = new Set<() => void>();
@@ -36,15 +37,16 @@ function checkName(name: unknown): string {
 }
 
 function checkStyle(patch: Partial<ZoneLayerStyle>): Partial<ZoneLayerStyle> {
-  const { hidden, opacity, blur, stroke } = patch;
+  const { hidden, opacity, blur, stroke, water } = patch;
   if (hidden !== undefined && typeof hidden !== "boolean") throw new Error("hidden must be true or false");
   if (stroke !== undefined && typeof stroke !== "boolean") throw new Error("stroke must be true or false");
+  if (water !== undefined && typeof water !== "boolean") throw new Error("water must be true or false");
   if (opacity !== undefined && !(typeof opacity === "number" && opacity >= 0 && opacity <= 1)) {
     throw new Error("opacity must be between 0 and 1");
   }
   if (blur !== undefined && !(typeof blur === "number" && blur >= 0 && blur <= 20))
     throw new Error("blur must be 0–20");
-  return Object.fromEntries(Object.entries({ hidden, opacity, blur, stroke }).filter(([, v]) => v !== undefined));
+  return Object.fromEntries(Object.entries({ hidden, opacity, blur, stroke, water }).filter(([, v]) => v !== undefined));
 }
 
 /** A new layer; zones of that type already on the map join it */

@@ -208,7 +208,8 @@ export const stylesSchema = z.strictObject({
             hidden: z.boolean(),
             opacity: z.number().min(0).max(1),
             blur: z.number().min(0).max(20),
-            stroke: z.boolean()
+            stroke: z.boolean(),
+            water: z.boolean().default(false) // its zones may cover water
           })
         )
       })
