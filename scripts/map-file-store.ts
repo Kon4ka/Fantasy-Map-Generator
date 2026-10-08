@@ -6,12 +6,13 @@ import { gzipSync } from "node:zlib";
 interface Target { id: string; name: string }
 
 /** Only verified maps in the launcher's directories may be overwritten. */
-export function createMapFileStore(directory: string, sourceDirectories: string[]) {
+export function createMapFileStore(directory: string, sourceDirectories: string[], onUse?: (file: string) => void) {
   const targets = new Map<string, { file: string; digest: string }>();
   const hash = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
   const register = (file: string, digest: string): Target => {
     const id = randomUUID();
     targets.set(id, { file, digest });
+    onUse?.(file);
     return { id, name: path.basename(file) };
   };
   const encode = (file: string, data: string) => {

@@ -94,7 +94,13 @@ const getDownloadsDirectory = () => {
   return path.join(process.env.USERPROFILE ?? root, "Downloads");
 };
 
+const lastMapFile = path.join(logDir, "last-map.txt");
+const rememberMap = file => fs.writeFileSync(lastMapFile, file, "utf8");
+
+/** The map opened or saved last in the editor, else the newest .map in Downloads or worlds/kontar */
 const getLatestMapPath = () => {
+  const last = fs.existsSync(lastMapFile) ? fs.readFileSync(lastMapFile, "utf8").trim() : "";
+  if (last && fs.existsSync(last)) return last;
   const directories = [getDownloadsDirectory(), path.join(root, "worlds", "kontar")];
   const maps = directories.flatMap(directory => {
     if (!fs.existsSync(directory)) return [];
@@ -207,7 +213,7 @@ try {
     if (!testRun) {
       const files = createMapFileStore(downloadsDirectory, [
         path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds", "kontar")
-      ]);
+      ], headless ? undefined : rememberMap);
       await page.exposeBinding("mapFileOperation", ({ frame }, action, ...args) => {
         if (frame !== page.mainFrame() || new URL(frame.url()).origin !== new URL(appUrl).origin) {
           throw new Error("File access is limited to the map editor");
@@ -253,6 +259,7 @@ try {
     );
     await page.bringToFront();
     log("Карта открыта");
+    if (!testRun && !headless) rememberMap(mapPath);
     if (!testRun) {
       const roots = [path.dirname(mapPath), downloadsDirectory, path.join(root, "worlds")];
       const infoPath = path.join(process.env.LOCALAPPDATA ?? root, "FantasyMapGenerator", "agent.json");
